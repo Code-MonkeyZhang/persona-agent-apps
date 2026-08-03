@@ -20,4 +20,4 @@ where = ["src"]
 include = ["rock_paper_scissors*"]
 
 [tool.setuptools.package-data]
-rock_paper_scissors = ["../../ui/*", "../../icon.png"]
+rock_paper_scissors = ["../../ui/**/*", "../../icon.png"]

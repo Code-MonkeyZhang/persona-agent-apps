@@ -1,12 +1,14 @@
 """
-Rock-Paper-Scissors Agent App server.
+Rock-Paper-Scissors Agent App server (best-of-3).
 
 Runs two channels in one process via anyio task group:
 - stdio MCP: exposes tools to the Agent, sends notifications on user moves
-- uvicorn HTTP: serves the Web UI, WebSocket for real-time game state
+  and on rematch requests
+- uvicorn HTTP: serves the built Web UI as static files, WebSocket for
+  real-time match state
 
-Both channels share a single RpsServer instance (in-memory game state +
-SQLite history), so a user's WS move can trigger an MCP notification,
+Both channels share a single RpsServer instance (in-memory match state +
+SQLite history), so a user's WS move/rematch can trigger an MCP notification,
 and an Agent's tool call can push a WS update — all within one event loop.
 """
 
@@ -25,11 +27,19 @@ from mcp.server.stdio import stdio_server
 from mcp.shared.message import SessionMessage
 from starlette.applications import Starlette
 from starlette.responses import FileResponse
-from starlette.routing import Route, WebSocketRoute
+from starlette.routing import Mount, Route, WebSocketRoute
+from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from .db import HistoryDB
-from .game import RESULT_TEXT, MOVE_LABELS, GameState, judge
+from .game import (
+    MOVE_LABELS,
+    RESULT_TEXT,
+    WINS_NEEDED,
+    GameState,
+    judge,
+    match_winner,
+)
 from .log import initialize as log_init, log
 
 APP_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -59,7 +69,10 @@ _INJECTED_PARAMS = {
 TOOLS = [
     types.Tool(
         name="start_game",
-        description="开始一局剪刀石头布。调用后用户会在面板出招，你收到通知后再出招。",
+        description=(
+            "开始一局剪刀石头布（三局两胜）。调用后用户会在面板出招，"
+            "你收到通知后再出招。先赢两局者赢得整场。"
+        ),
         inputSchema={
             "type": "object",
             "properties": dict(_INJECTED_PARAMS),
@@ -67,7 +80,7 @@ TOOLS = [
     ),
     types.Tool(
         name="play_move",
-        description="出招。收到用户出招通知后调用。",
+        description="出招。收到用户出招通知后调用。单局平局会重出，不计分。",
         inputSchema={
             "type": "object",
             "required": ["move"],
@@ -83,7 +96,7 @@ TOOLS = [
     ),
     types.Tool(
         name="get_game_state",
-        description="查询当前游戏状态和比分。",
+        description="查询当前比赛状态和比分。",
         inputSchema={
             "type": "object",
             "properties": dict(_INJECTED_PARAMS),
@@ -104,7 +117,7 @@ TOOLS = [
 
 
 class RpsServer:
-    """Holds game state, DB, and bridges between MCP and WS channels."""
+    """Holds match state, DB, and bridges between MCP and WS channels."""
 
     def __init__(self) -> None:
         self.db = HistoryDB(DATA_DIR / "history.db")
@@ -118,16 +131,17 @@ class RpsServer:
     # --- MCP tool handlers ---
 
     async def start_game(self, agent_id: str, session_id: str) -> str:
-        """Start a new game session. Ends the previous one if it exists."""
+        """Start a new best-of-3 match. Ends the previous one if it exists."""
         if self.state:
             self.db.end_game(
                 self.state.game_id,
                 self.state.user_score,
                 self.state.agent_score,
+                self.state.winner,
             )
             log(
                 "INFO",
-                "previous_game_ended",
+                "previous_match_ended",
                 game_id=self.state.game_id,
             )
 
@@ -138,39 +152,72 @@ class RpsServer:
         self.db.start_game(game_id, agent_id, session_id)
         log(
             "INFO",
-            "game_started",
+            "match_started",
             game_id=game_id,
             agent_id=agent_id,
             session_id=session_id,
         )
 
         await self._push_state()
-        return "游戏已开始！请用户在右侧面板出招。"
+        return (
+            f"游戏已开始！三局两胜，先赢{WINS_NEEDED}局者获胜。"
+            "请用户在右侧面板出招。"
+        )
 
     async def play_move(
         self, move: str, agent_id: str, session_id: str
     ) -> str:
-        """Judge the Agent's move against the user's pending move."""
+        """Judge the Agent's move against the user's pending move (best-of-3)."""
         if not self.state:
-            return "游戏还没开始，请先调用 start_game"
-
+            return "比赛还没开始，请先调用 start_game"
+        if self.state.game_over:
+            return "整场已结束，请调用 start_game 开始新一场"
         if not self.state.waiting_for_agent or not self.state.user_move_pending:
             return "用户还没出招，请等待用户出招后再调用 play_move"
-
         if move not in VALID_MOVES:
             return f"无效的出招: {move}，请使用 rock/paper/scissors"
 
         user_move = self.state.user_move_pending
-        result = judge(user_move, move)  # type: ignore[arg-type]
-
-        if result == "user_win":
-            self.state.user_score += 1
-        elif result == "agent_win":
-            self.state.agent_score += 1
+        result = judge(user_move, move)
 
         self.state.last_user_move = user_move
-        self.state.last_agent_move = move  # type: ignore[assignment]
+        self.state.last_agent_move = move
         self.state.last_result = result
+
+        # 平局：重出，不计分、不推进局号
+        if result == "draw":
+            self.db.add_round(
+                self.state.game_id,
+                self.state.round_no,
+                user_move,
+                move,
+                result,
+                self.state.user_score,
+                self.state.agent_score,
+            )
+            self.state.waiting_for_agent = False
+            self.state.user_move_pending = None
+            log(
+                "INFO",
+                "round_draw",
+                round=self.state.round_no,
+                score=f"{self.state.user_score}:{self.state.agent_score}",
+            )
+            await self._push_state()
+            return (
+                f"第{self.state.round_no}局："
+                f"你出了{MOVE_LABELS[move]},"
+                f"用户出了{MOVE_LABELS[user_move]},"
+                f"平局，重出！"
+                f"当前比分 用户{self.state.user_score}:"
+                f"Agent{self.state.agent_score}"
+            )
+
+        # 分胜负：胜方计 1 分
+        if result == "user_win":
+            self.state.user_score += 1
+        else:
+            self.state.agent_score += 1
 
         self.db.add_round(
             self.state.game_id,
@@ -182,26 +229,44 @@ class RpsServer:
             self.state.agent_score,
         )
 
-        log(
-            "INFO",
-            "round_completed",
-            round=self.state.round_no,
-            user_move=user_move,
-            agent_move=move,
-            result=result,
-            score=f"{self.state.user_score}:{self.state.agent_score}",
-        )
-
-        reply = (
+        reply_prefix = (
             f"第{self.state.round_no}局："
             f"你出了{MOVE_LABELS[move]},"
             f"用户出了{MOVE_LABELS[user_move]},"
             f"{RESULT_TEXT[result]}！"
-            f"当前比分 用户{self.state.user_score}:"
-            f"Agent{self.state.agent_score}"
         )
 
-        self.state.round_no += 1
+        # 检查整场胜负
+        winner = match_winner(self.state.user_score, self.state.agent_score)
+        if winner:
+            self.state.game_over = True
+            self.state.winner = winner
+            self.db.end_game(
+                self.state.game_id,
+                self.state.user_score,
+                self.state.agent_score,
+                winner,
+            )
+            verdict = "你赢了整场！" if winner == "agent" else "用户赢了整场！"
+            log(
+                "INFO",
+                "match_over",
+                winner=winner,
+                score=f"{self.state.user_score}:{self.state.agent_score}",
+            )
+            reply = (
+                f"{reply_prefix}整场结束，{verdict}"
+                f"最终比分 用户{self.state.user_score}:"
+                f"Agent{self.state.agent_score}"
+            )
+        else:
+            self.state.round_no += 1
+            reply = (
+                f"{reply_prefix}"
+                f"当前比分 用户{self.state.user_score}:"
+                f"Agent{self.state.agent_score}"
+            )
+
         self.state.waiting_for_agent = False
         self.state.user_move_pending = None
 
@@ -210,7 +275,15 @@ class RpsServer:
 
     def get_game_state(self) -> str:
         if not self.state:
-            return "暂无游戏进行中"
+            return "暂无比赛进行中"
+        if self.state.game_over:
+            verdict = "你赢" if self.state.winner == "agent" else "用户赢"
+            return (
+                f"整场已结束，{verdict}，"
+                f"最终比分 用户{self.state.user_score}:"
+                f"Agent{self.state.agent_score}。"
+                f"调用 start_game 开始新一场"
+            )
         turn = (
             "轮到你出招"
             if self.state.waiting_for_agent
@@ -219,7 +292,7 @@ class RpsServer:
         return (
             f"当前比分 用户{self.state.user_score}:"
             f"Agent{self.state.agent_score},"
-            f"第{self.state.round_no}局,{turn}"
+            f"第{self.state.round_no}局（三局两胜）,{turn}"
         )
 
     def get_game_history(self) -> str:
@@ -227,19 +300,19 @@ class RpsServer:
         if not history:
             return "暂无历史记录"
 
-        parts = [f"共{len(history)}局"]
+        parts = [f"共{len(history)}场"]
         for i, game in enumerate(history, 1):
             u, a = game["userScore"], game["agentScore"]
             if not game["endedAt"]:
                 status = "进行中"
-            elif u > a:
+            elif game["winner"] == "user":
                 status = "用户胜"
-            elif a > u:
+            elif game["winner"] == "agent":
                 status = "Agent胜"
             else:
-                status = "平局"
+                status = "中途结束"
             parts.append(
-                f"第{i}局 {u}:{a} {status}"
+                f"第{i}场 {u}:{a} {status}"
                 f"（{len(game['rounds'])}轮）"
             )
         return "。".join(parts)
@@ -255,7 +328,7 @@ class RpsServer:
             {
                 "type": "init",
                 "state": self.state.to_dict() if self.state else None,
-                "history": self.db.get_history(),
+                "history": self.db.get_history(completed_only=True),
             }
         )
 
@@ -264,6 +337,8 @@ class RpsServer:
                 msg = await websocket.receive_json()
                 if msg.get("type") == "move":
                     await self._on_user_move(msg.get("move", ""))
+                elif msg.get("type") == "rematch":
+                    await self._on_rematch()
         except WebSocketDisconnect:
             pass
         except Exception as e:
@@ -279,12 +354,12 @@ class RpsServer:
     # --- Internal helpers ---
 
     async def _push_state(self) -> None:
-        """Broadcast current game state + full history to all WS clients."""
+        """Broadcast current match state + completed history to all WS clients."""
         await self._broadcast_ws(
             {
                 "type": "update",
                 "state": self.state.to_dict() if self.state else None,
-                "history": self.db.get_history(),
+                "history": self.db.get_history(completed_only=True),
             }
         )
 
@@ -294,17 +369,33 @@ class RpsServer:
             log("WARN", "invalid_move", move=move)
             return
 
-        if not self.state or self.state.waiting_for_agent:
-            log("WARN", "move_ignored", reason="no game or not user's turn")
+        if not self.state or self.state.game_over:
+            log("WARN", "move_ignored", reason="no match or match over")
+            return
+        if self.state.waiting_for_agent:
+            log("WARN", "move_ignored", reason="not user's turn")
             return
 
-        self.state.user_move_pending = move  # type: ignore[assignment]
-        self.state.last_user_move = move  # type: ignore[assignment]
+        self.state.user_move_pending = move
+        self.state.last_user_move = move
         self.state.waiting_for_agent = True
 
         content = f"用户出了{MOVE_LABELS[move]}，轮到你出招了"
         await self._send_notification(content)
         await self._push_state()
+
+    async def _on_rematch(self) -> None:
+        """User clicked 'rematch' — notify the Agent to start a new match."""
+        if not self.state or not self.state.game_over:
+            log(
+                "WARN",
+                "rematch_ignored",
+                reason="no finished match to rematch",
+            )
+            return
+        content = "用户想再来一局，请调用 start_game 开始新一场"
+        await self._send_notification(content)
+        log("INFO", "rematch_requested")
 
     async def _send_notification(self, content: str) -> None:
         """Push a notifications/app message through the stdio write stream."""
@@ -312,7 +403,7 @@ class RpsServer:
             log(
                 "WARN",
                 "notification_skipped",
-                reason="no write_stream or no game state",
+                reason="no write_stream or no state",
             )
             return
 
@@ -344,16 +435,19 @@ class RpsServer:
 
 
 def create_http_app(server: RpsServer) -> Starlette:
-    async def homepage(_request):
-        return FileResponse(UI_DIR / "index.html")
-
     async def icon(_request):
         return FileResponse(ICON_PATH)
 
     routes = [
-        Route("/", homepage),
         Route("/icon.png", icon),
         WebSocketRoute("/ws", server.handle_websocket),
+        # Static UI build (index.html + assets/). html=True serves
+        # index.html at "/". Must be last so /icon.png and /ws win first.
+        Mount(
+            "/",
+            app=StaticFiles(directory=str(UI_DIR), html=True),
+            name="ui",
+        ),
     ]
     return Starlette(routes=routes)
 

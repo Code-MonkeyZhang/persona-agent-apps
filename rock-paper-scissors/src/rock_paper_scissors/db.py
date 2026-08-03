@@ -1,9 +1,11 @@
 """
-SQLite persistence for game history.
+SQLite persistence for best-of-3 match history.
 
 Two tables:
-- games: one row per game session (start_game → next start_game)
-- rounds: one row per round (each play_move result)
+- games: one row per match (start_game → someone reaches WINS_NEEDED, or
+  abandoned when a new match starts)
+- rounds: one row per round (each play_move result, including draws that
+  were replayed — same round_no can appear multiple times)
 
 Uses stdlib sqlite3 with synchronous calls — data volume is tiny and
 operations complete in microseconds, so event-loop blocking is negligible.
@@ -24,6 +26,7 @@ CREATE TABLE IF NOT EXISTS games (
     ended_at    TEXT,
     user_score  INTEGER NOT NULL DEFAULT 0,
     agent_score INTEGER NOT NULL DEFAULT 0,
+    winner      TEXT,
     agent_id    TEXT NOT NULL,
     session_id  TEXT NOT NULL
 );
@@ -47,15 +50,23 @@ def _now() -> str:
 
 
 class HistoryDB:
-    """SQLite-backed game history store."""
+    """SQLite-backed match history store."""
 
     def __init__(self, db_path: Path) -> None:
         db_path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(db_path))
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
+        self._migrate()
         self._conn.commit()
         log("INFO", "db_ready", path=str(db_path))
+
+    def _migrate(self) -> None:
+        """Add `winner` column to legacy games tables (pre-best-of-3)."""
+        cols = {c["name"] for c in self._conn.execute("PRAGMA table_info(games)")}
+        if "winner" not in cols:
+            self._conn.execute("ALTER TABLE games ADD COLUMN winner TEXT")
+            log("INFO", "db_migrated", change="added winner column to games")
 
     def start_game(
         self, game_id: str, agent_id: str, session_id: str
@@ -68,12 +79,16 @@ class HistoryDB:
         self._conn.commit()
 
     def end_game(
-        self, game_id: str, user_score: int, agent_score: int
+        self,
+        game_id: str,
+        user_score: int,
+        agent_score: int,
+        winner: str | None = None,
     ) -> None:
         self._conn.execute(
-            "UPDATE games SET ended_at = ?, user_score = ?, agent_score = ? "
-            "WHERE id = ?",
-            (_now(), user_score, agent_score, game_id),
+            "UPDATE games SET ended_at = ?, user_score = ?, agent_score = ?, "
+            "winner = ? WHERE id = ?",
+            (_now(), user_score, agent_score, winner, game_id),
         )
         self._conn.commit()
 
@@ -105,16 +120,25 @@ class HistoryDB:
         )
         self._conn.commit()
 
-    def get_history(self) -> list[dict]:
-        """Return all games with their rounds, newest game first."""
-        games = self._conn.execute(
-            "SELECT * FROM games ORDER BY started_at DESC"
-        ).fetchall()
+    def get_history(self, completed_only: bool = False) -> list[dict]:
+        """Return games with their rounds, newest game first.
+
+        - completed_only=True: exclude in-progress matches (ended_at IS NULL).
+          Used for the Web UI history panel so an active match never leaks in.
+        - completed_only=False: all matches. Used for the Agent's
+          get_game_history tool, which needs to see the current match too.
+        """
+        query = "SELECT * FROM games"
+        if completed_only:
+            query += " WHERE ended_at IS NOT NULL"
+        query += " ORDER BY started_at DESC"
+        games = self._conn.execute(query).fetchall()
 
         result = []
         for g in games:
             rounds = self._conn.execute(
-                "SELECT * FROM rounds WHERE game_id = ? ORDER BY round_no",
+                # Order by id (insertion order) so replayed draws stay in sequence
+                "SELECT * FROM rounds WHERE game_id = ? ORDER BY id",
                 (g["id"],),
             ).fetchall()
             result.append(
@@ -124,6 +148,7 @@ class HistoryDB:
                     "endedAt": g["ended_at"],
                     "userScore": g["user_score"],
                     "agentScore": g["agent_score"],
+                    "winner": g["winner"],
                     "rounds": [
                         {
                             "roundNo": r["round_no"],
