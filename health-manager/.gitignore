@@ -1,0 +1,17 @@
+*.pyc
+__pycache__/
+
+# Generated images
+*.png
+
+# SQLite database
+*.sqlite
+database.sqlite
+
+# IDE
+.vscode/
+.idea/
+
+raw_data/
+rawdata2markdown/
+model/

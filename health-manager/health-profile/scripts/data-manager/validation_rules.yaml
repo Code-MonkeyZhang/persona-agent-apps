@@ -1,0 +1,446 @@
+# CSV 数据验证规则
+# 防止离谱数值和不正确的定性值输入
+
+# ==========================================
+# 数值上限规则（防止离谱值）
+# ==========================================
+
+renal:
+  肌酐:
+    max_value: 2000
+    unit: umol/L
+    message: "肌酐值 2000umol/L 以上已超出合理范围，请检查"
+
+  尿素:
+    max_value: 50
+    unit: mmol/L
+    message: "尿素值 50mmol/L 以上已超出合理范围，请检查"
+
+  胱抑素C:
+    max_value: 20
+    unit: mg/L
+    message: "胱抑素C值 20mg/L 以上已超出合理范围，请检查"
+
+  eGFR:
+    min_value: 0
+    max_value: 200
+    unit: mL/min
+    message: "eGFR值应在 0-200 mL/min 范围内"
+
+liver:
+  白蛋白:
+    max_value: 200
+    unit: g/L
+    message: "白蛋白值 200g/L 以上已超出合理范围，请检查"
+
+  丙氨酸氨基转移酶:
+    max_value: 2000
+    unit: U/L
+    message: "ALT值 2000U/L 以上已超出合理范围，请检查"
+
+  天门冬氨酸氨基转移酶:
+    max_value: 2000
+    unit: U/L
+    message: "AST值 2000U/L 以上已超出合理范围，请检查"
+
+  总胆红素:
+    max_value: 200
+    unit: umol/L
+    message: "总胆红素值 200umol/L 以上已超出合理范围，请检查"
+
+  总蛋白:
+    max_value: 200
+    unit: g/L
+    message: "总蛋白值 200g/L 以上已超出合理范围，请检查"
+
+urine_protein:
+  24小时尿蛋白:
+    max_value: 10000
+    unit: mg/24h
+    message: "24小时尿蛋白不应超过 10g，请检查输入"
+
+  24小时尿量:
+    min_value: 100
+    max_value: 6000
+    unit: mL
+    message: "24小时尿量应在 100-6000 mL 范围内，请检查"
+
+  随机尿蛋白:
+    max_value: 20000
+    unit: mg/L
+    message: "随机尿蛋白值 20000mg/L 以上已超出合理范围，请检查"
+
+  尿蛋白/尿肌酐:
+    max_value: 20000
+    unit: mg/gCr
+    message: "尿蛋白/肌酐比 20000mg/g 以上已超出合理范围，请检查"
+
+  随机尿微量白蛋白:
+    max_value: 20000
+    unit: mg/L
+    message: "尿微量白蛋白值 20000mg/L 以上已超出合理范围，请检查"
+
+  尿白蛋白/尿肌酐:
+    max_value: 20000
+    unit: mg/g
+    message: "尿白蛋白/肌酐比 20000mg/g 以上已超出合理范围，请检查"
+
+hematology:
+  白细胞计数:
+    max_value: 100
+    unit: 10^9/L
+    message: "白细胞计数 100×10^9/L 以上已超出合理范围，请检查"
+
+  红细胞计数:
+    min_value: 1
+    max_value: 10
+    unit: 10^12/L
+    message: "红细胞计数应在 1-10×10^12/L 范围内，请检查"
+
+  血红蛋白:
+    min_value: 50
+    max_value: 300
+    unit: g/L
+    message: "血红蛋白应在 50-300 g/L 范围内，请检查"
+
+  血小板计数:
+    min_value: 10
+    max_value: 1000
+    unit: 10^9/L
+    message: "血小板计数应在 10-1000×10^9/L 范围内，请检查"
+
+lipid:
+  总胆固醇:
+    max_value: 30
+    unit: mmol/L
+    message: "总胆固醇值 30mmol/L 以上已超出合理范围，请检查"
+
+  甘油三酯:
+    max_value: 100
+    unit: mmol/L
+    message: "甘油三酯值 100mmol/L 以上已超出合理范围，请检查"
+
+  高密度脂蛋白胆固醇:
+    max_value: 5
+    unit: mmol/L
+    message: "HDL-C值 5mmol/L 以上已超出合理范围，请检查"
+
+  低密度脂蛋白胆固醇:
+    max_value: 15
+    unit: mmol/L
+    message: "LDL-C值 15mmol/L 以上已超出合理范围，请检查"
+
+electrolyte:
+  钾:
+    min_value: 1
+    max_value: 10
+    unit: mmol/L
+    message: "钾离子值应在 1-10 mmol/L 范围内，请检查"
+
+  钠:
+    min_value: 100
+    max_value: 200
+    unit: mmol/L
+    message: "钠离子值应在 100-200 mmol/L 范围内，请检查"
+
+  氯:
+    min_value: 50
+    max_value: 150
+    unit: mmol/L
+    message: "氯离子值应在 50-150 mmol/L 范围内，请检查"
+
+  碳酸氢根:
+    min_value: 5
+    max_value: 50
+    unit: mmol/L
+    message: "碳酸氢根值应在 5-50 mmol/L 范围内，请检查"
+
+cardiac:
+  肌酸激酶:
+    max_value: 10000
+    unit: U/L
+    message: "CK值 10000U/L 以上已超出合理范围，请检查"
+
+  CK-MB:
+    max_value: 500
+    unit: U/L
+    message: "CK-MB值 500U/L 以上已超出合理范围，请检查"
+
+  乳酸脱氢酶:
+    max_value: 5000
+    unit: U/L
+    message: "LDH值 5000U/L 以上已超出合理范围，请检查"
+
+thyroid:
+  总T3:
+    min_value: 0.5
+    max_value: 10
+    unit: nmol/L
+    message: "T3值应在 0.5-10 nmol/L 范围内，请检查"
+
+  总T4:
+    min_value: 50
+    max_value: 300
+    unit: nmol/L
+    message: "T4值应在 50-300 nmol/L 范围内，请检查"
+
+  促甲状腺激素:
+    min_value: 0.01
+    max_value: 100
+    unit: mIU/L
+    message: "TSH值应在 0.01-100 mIU/L 范围内，请检查"
+
+vitamin:
+  25-羟基维生素D:
+    min_value: 5
+    max_value: 400
+    unit: nmol/L
+    message: "25-羟基维生素D值应在 5-400 nmol/L 范围内，请检查"
+
+immunology:
+  免疫球蛋白G:
+    max_value: 50
+    unit: g/L
+    message: "IgG值 50g/L 以上已超出合理范围，请检查"
+
+  免疫球蛋白A:
+    max_value: 20
+    unit: g/L
+    message: "IgA值 20g/L 以上已超出合理范围，请检查"
+
+  免疫球蛋白M:
+    max_value: 10
+    unit: g/L
+    message: "IgM值 10g/L 以上已超出合理范围，请检查"
+
+  补体C3:
+    max_value: 5
+    unit: g/L
+    message: "补体C3值 5g/L 以上已超出合理范围，请检查"
+
+coagulation:
+  凝血酶原时间:
+    min_value: 5
+    max_value: 100
+    unit: s
+    message: "PT值应在 5-100 秒范围内，请检查"
+
+  国际标准化比值INR:
+    min_value: 0.5
+    max_value: 10
+    unit: ratio
+    message: "INR值应在 0.5-10 范围内，请检查"
+
+  纤维蛋白原:
+    min_value: 0.5
+    max_value: 10
+    unit: g/L
+    message: "纤维蛋白原值应在 0.5-10 g/L 范围内，请检查"
+
+iron:
+  总铁结合力:
+    min_value: 30
+    max_value: 100
+    unit: umol/L
+    message: "总铁结合力应在 30-100 umol/L 范围内，请检查"
+
+  血清铁蛋白:
+    max_value: 10000
+    unit: ng/mL
+    message: "铁蛋白值 10000ng/mL 以上已超出合理范围，请检查"
+
+g6pd:
+  葡萄糖-6-磷酸脱氢酶活性:
+    min_value: 100
+    max_value: 10000
+    unit: IU/L
+    message: "G6PD活性应在 100-10000 IU/L 范围内，请检查"
+
+esr:
+  血沉:
+    max_value: 100
+    unit: mm/h
+    message: "血沉值 100mm/h 以上已超出合理范围，请检查"
+
+# ==========================================
+# 定性值白名单规则
+# ==========================================
+
+urinalysis_qualitative:
+  允许值:
+    - "阴性"
+    - "阳性"
+    - "neg"
+    - "pos"
+    - "未检出"
+    - "检出"
+    - "-"
+    - "+"
+    - "++"
+    - "+++"
+    - "++++"
+    - "±"
+    - "trace"
+    - "弱阳性"
+    - "弱阴性"
+  message: "定性值格式不正确，请使用标准值（阴性、阳性、1+、2+、3+、4+等）"
+
+urine_protein_plus:
+  允许值:
+    - "阴性"
+    - "+"
+    - "1+"
+    - "2+"
+    - "3+"
+    - "4+"
+    - "++"
+    - "+++"
+    - "++++"
+  message: "尿蛋白定性值格式不正确，请使用（阴性、1+、2+、3+、4+等）"
+
+urine_sediment:
+  允许值:
+    - "未见"
+    - "0-1"
+    - "0-2"
+    - "0-3"
+    - "0-5"
+    - "+1"
+    - "1+"
+    - "+2"
+    - "2+"
+    - "+3"
+    - "3+"
+    - "+4"
+    - "4+"
+    - "+5"
+    - "5+"
+    - "偶见"
+    - "少量"
+    - "+-"
+  message: "尿沉渣镜检值格式不正确，请使用（未见、0-1、0-2等）"
+
+urine_chem_range:
+  潜血:
+    允许值:
+      - "阴性"
+      - "+"
+      - "1+"
+      - "2+"
+      - "3+"
+      - "4+"
+      - "+2"
+      - "+3"
+      - "+4"
+  白细胞:
+    允许值:
+      - "阴性"
+      - "+"
+      - "1+"
+      - "2+"
+      - "3+"
+      - "4+"
+      - "+2"
+      - "+3"
+      - "+4"
+  亚硝酸盐:
+    允许值:
+      - "阴性"
+      - "阳性"
+  尿蛋白:
+    允许值:
+      - "阴性"
+      - "+"
+      - "1+"
+      - "2+"
+      - "3+"
+      - "4+"
+      - "+2"
+      - "+3"
+      - "+4"
+
+blood_group:
+  ABO血型:
+    允许值:
+      - "A型"
+      - "B型"
+      - "O型"
+      - "AB型"
+      - "A"
+      - "B"
+      - "O"
+      - "AB"
+  Rh血型:
+    允许值:
+      - "阳性"
+      - "阴性"
+      - "+"
+      - "-"
+
+text_only:
+  # 文本类型项目（不需要单位）
+  项目列表:
+    - 病理诊断
+    - 超声所见
+    - 右肾大小
+    - 胸部CT平扫
+    - 病理类型
+    - 右肾实质厚
+    - 左肾大小
+    - 左肾实质厚
+    - 结论
+  message: "文本类项目不需要单位"
+
+ratio_only:
+  # 比值类型项目（不需要单位）
+  项目列表:
+    - 国际标准化比值INR
+    - 直/总胆比值
+    - 白蛋白/球蛋白比
+    - 狼疮抗凝物筛查比值
+    - 狼疮抗凝物确认比值
+    - 标准化狼疮抗凝物比值
+    - ACR
+    - 尿蛋白/肌酐比
+    - 尿白蛋白/尿肌酐
+    - 尿白蛋白/尿肌酐
+  message: "比值类项目不需要单位"
+
+# ==========================================
+# 通用数值规则（兜底规则）
+# ==========================================
+
+generic_numeric_limits:
+  血红蛋白:
+    max_value: 200
+    unit: g/L
+    message: "血红蛋白值 200g/L 以上已超出合理范围，请检查"
+
+  白细胞:
+    max_value: 50
+    unit: 10^9/L
+    message: "白细胞值 50×10^9/L 以上已超出合理范围，请检查"
+
+  血小板:
+    max_value: 1000
+    unit: 10^9/L
+    message: "血小板值 1000×10^9/L 以上已超出合理范围，请检查"
+
+  潜血:
+    max_value: 500
+    unit: Cell/uL
+    message: "潜血值 500Cell/uL 以上已超出合理范围，请检查"
+
+  pH值:
+    min_value: 4.0
+    max_value: 10.0
+    unit: ""
+    message: "pH值应在 4.0-10.0 范围内，请检查"
+
+# ==========================================
+# 必填项规则
+# ==========================================
+
+required_fields:
+  - date
+  - analyte

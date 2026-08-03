@@ -6,3 +6,7 @@
 *.pyc
 **/*.egg-info/
 .DS_Store
+
+# health-manager 真实体检数据（隐私隔离，本地保留不入库）
+health-manager/health-profile/refine_data/health_data/
+health-manager/health-profile/refine_data/health_journal.md
