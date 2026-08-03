@@ -380,7 +380,7 @@ class RpsServer:
         self.state.last_user_move = move
         self.state.waiting_for_agent = True
 
-        content = f"用户出了{MOVE_LABELS[move]}，轮到你出招了"
+        content = "用户已出招，轮到你出招了"
         await self._send_notification(content)
         await self._push_state()
 
