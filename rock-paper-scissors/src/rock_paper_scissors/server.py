@@ -1,0 +1,443 @@
+"""
+Rock-Paper-Scissors Agent App server.
+
+Runs two channels in one process via anyio task group:
+- stdio MCP: exposes tools to the Agent, sends notifications on user moves
+- uvicorn HTTP: serves the Web UI, WebSocket for real-time game state
+
+Both channels share a single RpsServer instance (in-memory game state +
+SQLite history), so a user's WS move can trigger an MCP notification,
+and an Agent's tool call can push a WS update — all within one event loop.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+import uuid
+from pathlib import Path
+
+import anyio
+import mcp.types as types
+import uvicorn
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.shared.message import SessionMessage
+from starlette.applications import Starlette
+from starlette.responses import FileResponse
+from starlette.routing import Route, WebSocketRoute
+from starlette.websockets import WebSocket, WebSocketDisconnect
+
+from .db import HistoryDB
+from .game import RESULT_TEXT, MOVE_LABELS, GameState, judge
+from .log import initialize as log_init, log
+
+APP_ROOT = Path(__file__).resolve().parent.parent.parent
+UI_DIR = APP_ROOT / "ui"
+ICON_PATH = APP_ROOT / "icon.png"
+DATA_DIR = APP_ROOT / "data"
+LOG_PATH = APP_ROOT / "rps.log"
+
+VALID_MOVES = {"rock", "paper", "scissors"}
+
+# MCP notification source — must match the mcp.json key
+SOURCE = "rock-paper-scissors"
+
+# --- Tool definitions -------------------------------------------------------
+
+_INJECTED_PARAMS = {
+    "agentId": {
+        "type": "string",
+        "description": "平台自动注入，无需填写",
+    },
+    "sessionId": {
+        "type": "string",
+        "description": "平台自动注入，无需填写",
+    },
+}
+
+TOOLS = [
+    types.Tool(
+        name="start_game",
+        description="开始一局剪刀石头布。调用后用户会在面板出招，你收到通知后再出招。",
+        inputSchema={
+            "type": "object",
+            "properties": dict(_INJECTED_PARAMS),
+        },
+    ),
+    types.Tool(
+        name="play_move",
+        description="出招。收到用户出招通知后调用。",
+        inputSchema={
+            "type": "object",
+            "required": ["move"],
+            "properties": {
+                "move": {
+                    "type": "string",
+                    "enum": ["rock", "paper", "scissors"],
+                    "description": "你的出招",
+                },
+                **_INJECTED_PARAMS,
+            },
+        },
+    ),
+    types.Tool(
+        name="get_game_state",
+        description="查询当前游戏状态和比分。",
+        inputSchema={
+            "type": "object",
+            "properties": dict(_INJECTED_PARAMS),
+        },
+    ),
+    types.Tool(
+        name="get_game_history",
+        description="查询历史对局记录。",
+        inputSchema={
+            "type": "object",
+            "properties": dict(_INJECTED_PARAMS),
+        },
+    ),
+]
+
+
+# --- Shared server state ----------------------------------------------------
+
+
+class RpsServer:
+    """Holds game state, DB, and bridges between MCP and WS channels."""
+
+    def __init__(self) -> None:
+        self.db = HistoryDB(DATA_DIR / "history.db")
+        self.state: GameState | None = None
+        self._write_stream: object | None = None
+        self._ws_clients: set[WebSocket] = set()
+
+    def set_write_stream(self, stream: object) -> None:
+        self._write_stream = stream
+
+    # --- MCP tool handlers ---
+
+    async def start_game(self, agent_id: str, session_id: str) -> str:
+        """Start a new game session. Ends the previous one if it exists."""
+        if self.state:
+            self.db.end_game(
+                self.state.game_id,
+                self.state.user_score,
+                self.state.agent_score,
+            )
+            log(
+                "INFO",
+                "previous_game_ended",
+                game_id=self.state.game_id,
+            )
+
+        game_id = str(uuid.uuid4())
+        self.state = GameState(
+            game_id=game_id, agent_id=agent_id, session_id=session_id
+        )
+        self.db.start_game(game_id, agent_id, session_id)
+        log(
+            "INFO",
+            "game_started",
+            game_id=game_id,
+            agent_id=agent_id,
+            session_id=session_id,
+        )
+
+        await self._push_state()
+        return "游戏已开始！请用户在右侧面板出招。"
+
+    async def play_move(
+        self, move: str, agent_id: str, session_id: str
+    ) -> str:
+        """Judge the Agent's move against the user's pending move."""
+        if not self.state:
+            return "游戏还没开始，请先调用 start_game"
+
+        if not self.state.waiting_for_agent or not self.state.user_move_pending:
+            return "用户还没出招，请等待用户出招后再调用 play_move"
+
+        if move not in VALID_MOVES:
+            return f"无效的出招: {move}，请使用 rock/paper/scissors"
+
+        user_move = self.state.user_move_pending
+        result = judge(user_move, move)  # type: ignore[arg-type]
+
+        if result == "user_win":
+            self.state.user_score += 1
+        elif result == "agent_win":
+            self.state.agent_score += 1
+
+        self.state.last_user_move = user_move
+        self.state.last_agent_move = move  # type: ignore[assignment]
+        self.state.last_result = result
+
+        self.db.add_round(
+            self.state.game_id,
+            self.state.round_no,
+            user_move,
+            move,
+            result,
+            self.state.user_score,
+            self.state.agent_score,
+        )
+
+        log(
+            "INFO",
+            "round_completed",
+            round=self.state.round_no,
+            user_move=user_move,
+            agent_move=move,
+            result=result,
+            score=f"{self.state.user_score}:{self.state.agent_score}",
+        )
+
+        reply = (
+            f"第{self.state.round_no}局："
+            f"你出了{MOVE_LABELS[move]},"
+            f"用户出了{MOVE_LABELS[user_move]},"
+            f"{RESULT_TEXT[result]}！"
+            f"当前比分 用户{self.state.user_score}:"
+            f"Agent{self.state.agent_score}"
+        )
+
+        self.state.round_no += 1
+        self.state.waiting_for_agent = False
+        self.state.user_move_pending = None
+
+        await self._push_state()
+        return reply
+
+    def get_game_state(self) -> str:
+        if not self.state:
+            return "暂无游戏进行中"
+        turn = (
+            "轮到你出招"
+            if self.state.waiting_for_agent
+            else "等待用户出招"
+        )
+        return (
+            f"当前比分 用户{self.state.user_score}:"
+            f"Agent{self.state.agent_score},"
+            f"第{self.state.round_no}局,{turn}"
+        )
+
+    def get_game_history(self) -> str:
+        history = self.db.get_history()
+        if not history:
+            return "暂无历史记录"
+
+        parts = [f"共{len(history)}局"]
+        for i, game in enumerate(history, 1):
+            u, a = game["userScore"], game["agentScore"]
+            if not game["endedAt"]:
+                status = "进行中"
+            elif u > a:
+                status = "用户胜"
+            elif a > u:
+                status = "Agent胜"
+            else:
+                status = "平局"
+            parts.append(
+                f"第{i}局 {u}:{a} {status}"
+                f"（{len(game['rounds'])}轮）"
+            )
+        return "。".join(parts)
+
+    # --- WebSocket handler ---
+
+    async def handle_websocket(self, websocket: WebSocket) -> None:
+        await websocket.accept()
+        self._ws_clients.add(websocket)
+        log("INFO", "ws_connected", clients=len(self._ws_clients))
+
+        await websocket.send_json(
+            {
+                "type": "init",
+                "state": self.state.to_dict() if self.state else None,
+                "history": self.db.get_history(),
+            }
+        )
+
+        try:
+            while True:
+                msg = await websocket.receive_json()
+                if msg.get("type") == "move":
+                    await self._on_user_move(msg.get("move", ""))
+        except WebSocketDisconnect:
+            pass
+        except Exception as e:
+            log("WARN", "ws_error", error=str(e))
+        finally:
+            self._ws_clients.discard(websocket)
+            log(
+                "INFO",
+                "ws_disconnected",
+                clients=len(self._ws_clients),
+            )
+
+    # --- Internal helpers ---
+
+    async def _push_state(self) -> None:
+        """Broadcast current game state + full history to all WS clients."""
+        await self._broadcast_ws(
+            {
+                "type": "update",
+                "state": self.state.to_dict() if self.state else None,
+                "history": self.db.get_history(),
+            }
+        )
+
+    async def _on_user_move(self, move: str) -> None:
+        """Record the user's move and notify the Agent."""
+        if move not in VALID_MOVES:
+            log("WARN", "invalid_move", move=move)
+            return
+
+        if not self.state or self.state.waiting_for_agent:
+            log("WARN", "move_ignored", reason="no game or not user's turn")
+            return
+
+        self.state.user_move_pending = move  # type: ignore[assignment]
+        self.state.last_user_move = move  # type: ignore[assignment]
+        self.state.waiting_for_agent = True
+
+        content = f"用户出了{MOVE_LABELS[move]}，轮到你出招了"
+        await self._send_notification(content)
+        await self._push_state()
+
+    async def _send_notification(self, content: str) -> None:
+        """Push a notifications/app message through the stdio write stream."""
+        if not self._write_stream or not self.state:
+            log(
+                "WARN",
+                "notification_skipped",
+                reason="no write_stream or no game state",
+            )
+            return
+
+        notification = types.JSONRPCNotification(
+            jsonrpc="2.0",
+            method="notifications/app",
+            params={
+                "agentId": self.state.agent_id,
+                "sessionId": self.state.session_id,
+                "source": SOURCE,
+                "content": content,
+            },
+        )
+        await self._write_stream.send(SessionMessage(message=notification))
+        log("INFO", "notification_sent", content=content)
+
+    async def _broadcast_ws(self, data: dict) -> None:
+        """Send a message to all connected WS clients, dropping dead ones."""
+        dead: set[WebSocket] = set()
+        for ws in self._ws_clients:
+            try:
+                await ws.send_json(data)
+            except Exception:
+                dead.add(ws)
+        self._ws_clients -= dead
+
+
+# --- Starlette HTTP app -----------------------------------------------------
+
+
+def create_http_app(server: RpsServer) -> Starlette:
+    async def homepage(_request):
+        return FileResponse(UI_DIR / "index.html")
+
+    async def icon(_request):
+        return FileResponse(ICON_PATH)
+
+    routes = [
+        Route("/", homepage),
+        Route("/icon.png", icon),
+        WebSocketRoute("/ws", server.handle_websocket),
+    ]
+    return Starlette(routes=routes)
+
+
+# --- MCP handler factories --------------------------------------------------
+
+
+def _make_handlers(server: RpsServer):
+    async def handle_list_tools(_ctx, _params) -> types.ListToolsResult:
+        return types.ListToolsResult(tools=TOOLS)
+
+    async def handle_call_tool(_ctx, params) -> types.CallToolResult:
+        args = params.arguments or {}
+        name = params.name
+
+        if name == "start_game":
+            text = await server.start_game(
+                args.get("agentId", ""), args.get("sessionId", "")
+            )
+        elif name == "play_move":
+            text = await server.play_move(
+                args.get("move", ""),
+                args.get("agentId", ""),
+                args.get("sessionId", ""),
+            )
+        elif name == "get_game_state":
+            text = server.get_game_state()
+        elif name == "get_game_history":
+            text = server.get_game_history()
+        else:
+            text = f"未知工具: {name}"
+
+        log("INFO", "tool_called", tool=name)
+        return types.CallToolResult(
+            content=[types.TextContent(type="text", text=text)]
+        )
+
+    return handle_list_tools, handle_call_tool
+
+
+# --- Dual-channel runner ----------------------------------------------------
+
+
+async def run() -> None:
+    """Start uvicorn HTTP and stdio MCP concurrently."""
+    port = int(os.environ.get("APP_PORT", "0"))
+    if port == 0:
+        log("ERROR", "APP_PORT_not_set")
+        sys.exit(1)
+
+    log_init(LOG_PATH)
+
+    server = RpsServer()
+    http_app = create_http_app(server)
+
+    mcp = Server(SOURCE)
+    handle_list, handle_call = _make_handlers(server)
+    mcp.add_request_handler(
+        "tools/list", types.PaginatedRequestParams, handle_list
+    )
+    mcp.add_request_handler(
+        "tools/call", types.CallToolRequestParams, handle_call
+    )
+
+    uv_config = uvicorn.Config(
+        app=http_app,
+        host="127.0.0.1",
+        port=port,
+        log_config=None,
+        access_log=False,
+    )
+    uv_server = uvicorn.Server(uv_config)
+
+    log("INFO", "starting_dual_channel", port=port)
+
+    async with stdio_server() as (read_stream, write_stream):
+        server.set_write_stream(write_stream)
+        log("INFO", "stdio_ready")
+
+        async with anyio.create_task_group() as tg:
+            tg.start_soon(
+                mcp.run,
+                read_stream,
+                write_stream,
+                mcp.create_initialization_options(),
+            )
+            tg.start_soon(uv_server.serve)

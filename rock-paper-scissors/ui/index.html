@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>剪刀石头布</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, system-ui, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px 16px;
+    gap: 20px;
+  }
+
+  /* Score */
+  .score-bar {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    font-size: 20px;
+  }
+  .score-side { text-align: center; }
+  .score-label { font-size: 13px; color: #888; margin-bottom: 4px; }
+  .score-value { font-size: 36px; font-weight: 700; }
+  .score-vs { font-size: 20px; color: #555; }
+
+  /* Result area */
+  .result-area {
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  .move-emoji { font-size: 48px; transition: transform 0.2s; }
+  .move-vs { font-size: 18px; color: #555; }
+  .result-text { font-size: 18px; font-weight: 600; }
+  .result-user_win { color: #22c55e; }
+  .result-agent_win { color: #ef4444; }
+  .result-draw { color: #a3a3a3; }
+  .waiting-text { font-size: 15px; color: #888; }
+
+  /* Buttons */
+  .buttons {
+    display: flex;
+    gap: 16px;
+  }
+  .move-btn {
+    width: 88px;
+    height: 88px;
+    border-radius: 16px;
+    border: 2px solid #333;
+    background: #16213e;
+    color: #e0e0e0;
+    font-size: 32px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+  .move-btn:hover:not(:disabled) {
+    border-color: #6366f1;
+    transform: translateY(-2px);
+  }
+  .move-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .move-btn-label { font-size: 11px; color: #888; }
+
+  /* History */
+  .history-section {
+    width: 100%;
+    max-width: 420px;
+  }
+  .history-title {
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #2a2a3e;
+    padding-bottom: 6px;
+  }
+  .history-empty { font-size: 13px; color: #444; }
+  .history-game {
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    background: #16213e;
+    border-radius: 8px;
+  }
+  .game-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .game-score { font-weight: 600; }
+  .game-status-win { color: #22c55e; }
+  .game-status-lose { color: #ef4444; }
+  .game-status-draw { color: #a3a3a3; }
+  .rounds-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+    color: #777;
+  }
+  .round-badge {
+    padding: 2px 6px;
+    background: #1a1a2e;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+  <div class="score-bar">
+    <div class="score-side">
+      <div class="score-label">用户</div>
+      <div class="score-value" id="userScore">0</div>
+    </div>
+    <div class="score-vs">VS</div>
+    <div class="score-side">
+      <div class="score-label">Agent</div>
+      <div class="score-value" id="agentScore">0</div>
+    </div>
+  </div>
+
+  <div class="result-area" id="resultArea">
+    <span class="waiting-text" id="statusText">等待开始游戏...</span>
+  </div>
+
+  <div class="buttons" id="buttons">
+    <button class="move-btn" data-move="rock" disabled>
+      <span>✊</span>
+      <span class="move-btn-label">石头</span>
+    </button>
+    <button class="move-btn" data-move="scissors" disabled>
+      <span>✌️</span>
+      <span class="move-btn-label">剪刀</span>
+    </button>
+    <button class="move-btn" data-move="paper" disabled>
+      <span>✋</span>
+      <span class="move-btn-label">布</span>
+    </button>
+  </div>
+
+  <div class="history-section">
+    <div class="history-title">历史记录</div>
+    <div id="historyList">
+      <div class="history-empty">暂无记录</div>
+    </div>
+  </div>
+
+<script>
+const EMOJI = { rock: "✊", paper: "✋", scissors: "✌️" };
+const LABEL = { rock: "石头", paper: "布", scissors: "剪刀" };
+const RESULT_LABEL = { user_win: "你赢了", agent_win: "Agent赢了", draw: "平局" };
+
+const buttons = document.getElementById("buttons");
+const btns = document.querySelectorAll(".move-btn");
+const statusText = document.getElementById("statusText");
+const resultArea = document.getElementById("resultArea");
+const userScoreEl = document.getElementById("userScore");
+const agentScoreEl = document.getElementById("agentScore");
+const historyList = document.getElementById("historyList");
+
+let ws = null;
+let hasGame = false;
+
+function connect() {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  const base = location.host + location.pathname.replace(/\/$/, "");
+  ws = new WebSocket(proto + "//" + base + "/ws");
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "init" || msg.type === "update") {
+      renderState(msg.state);
+      renderHistory(msg.history || []);
+    }
+  };
+
+  ws.onclose = () => {
+    statusText.textContent = "连接断开，正在重连...";
+    setTimeout(connect, 2000);
+  };
+}
+
+function renderState(state) {
+  if (!state) {
+    hasGame = false;
+    setButtonsEnabled(false);
+    statusText.textContent = "等待开始游戏...";
+    resultArea.innerHTML = '<span class="waiting-text" id="statusText">等待开始游戏...</span>';
+    userScoreEl.textContent = "0";
+    agentScoreEl.textContent = "0";
+    return;
+  }
+
+  hasGame = true;
+  userScoreEl.textContent = state.userScore;
+  agentScoreEl.textContent = state.agentScore;
+
+  if (state.waitingForAgent) {
+    setButtonsEnabled(false);
+    const userEmoji = EMOJI[state.lastUserMove] || "?";
+    resultArea.innerHTML =
+      '<span class="move-emoji">' + userEmoji + "</span>" +
+      '<span class="waiting-text">Agent 思考中...</span>';
+  } else if (state.lastResult) {
+    setButtonsEnabled(true);
+    const u = EMOJI[state.lastUserMove] || "?";
+    const a = EMOJI[state.lastAgentMove] || "?";
+    const cls = "result-" + state.lastResult;
+    resultArea.innerHTML =
+      '<span class="move-emoji">' + u + "</span>" +
+      '<span class="move-vs">VS</span>' +
+      '<span class="move-emoji">' + a + "</span>" +
+      '<span class="result-text ' + cls + '">' +
+      RESULT_LABEL[state.lastResult] + "</span>";
+  } else {
+    setButtonsEnabled(true);
+    resultArea.innerHTML =
+      '<span class="waiting-text">出招吧！</span>';
+  }
+}
+
+function renderHistory(history) {
+  if (!history || history.length === 0) {
+    historyList.innerHTML = '<div class="history-empty">暂无记录</div>';
+    return;
+  }
+
+  let html = "";
+  for (let i = history.length - 1; i >= 0; i--) {
+    const g = history[i];
+    let statusCls = "game-status-draw";
+    let statusText;
+    if (!g.endedAt) {
+      statusText = "进行中";
+      statusCls = "game-status-draw";
+    } else if (g.userScore > g.agentScore) {
+      statusText = "你赢";
+      statusCls = "game-status-win";
+    } else if (g.agentScore > g.userScore) {
+      statusText = "你输";
+      statusCls = "game-status-lose";
+    } else {
+      statusText = "平局";
+    }
+
+    let rounds = "";
+    for (const r of g.rounds) {
+      rounds += '<span class="round-badge">' +
+        EMOJI[r.userMove] + "vs" + EMOJI[r.agentMove] +
+        (r.result === "user_win" ? "✓" : r.result === "agent_win" ? "✗" : "=") +
+        "</span>";
+    }
+
+    html += '<div class="history-game">' +
+      '<div class="game-header">' +
+        '<span class="game-score">' + g.userScore + " : " + g.agentScore + "</span>" +
+        '<span class="' + statusCls + '">' + statusText + "</span>" +
+      "</div>" +
+      '<div class="rounds-list">' + rounds + "</div>" +
+    "</div>";
+  }
+  historyList.innerHTML = html;
+}
+
+function setButtonsEnabled(enabled) {
+  for (const btn of btns) {
+    btn.disabled = !enabled || !hasGame;
+  }
+}
+
+buttons.addEventListener("click", (e) => {
+  const btn = e.target.closest(".move-btn");
+  if (!btn || btn.disabled) return;
+  const move = btn.dataset.move;
+  ws.send(JSON.stringify({ type: "move", move: move }));
+  setButtonsEnabled(false);
+});
+
+connect();
+</script>
+</body>
+</html>
