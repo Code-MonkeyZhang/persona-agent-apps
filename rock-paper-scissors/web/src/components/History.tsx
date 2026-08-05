@@ -3,8 +3,10 @@ import { EMOJI } from '../constants'
 
 export function History({ history }: { history: GameHistory[] }) {
   return (
-    <div className="history-section">
-      <div className="history-title">历史记录</div>
+    <details className="history-section">
+      <summary className="history-title">
+        历史记录{history.length > 0 && ` · ${history.length} 场`}
+      </summary>
       {history.length === 0 ? (
         <div className="history-empty">暂无记录</div>
       ) : (
@@ -45,6 +47,6 @@ export function History({ history }: { history: GameHistory[] }) {
           )
         })
       )}
-    </div>
+    </details>
   )
 }

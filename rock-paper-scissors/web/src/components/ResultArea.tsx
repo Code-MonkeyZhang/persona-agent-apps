@@ -4,6 +4,7 @@ import { EMOJI, RESULT_LABEL } from '../constants'
 interface Props {
   state: GameState | null
   onRematch: () => void
+  onStartGame: () => void
 }
 
 /**
@@ -15,16 +16,14 @@ interface Props {
  * 4. round result   → emoji VS emoji + verdict (incl. draw replay)
  * 5. match over     → final score + verdict + rematch button
  */
-export function ResultArea({ state, onRematch }: Props) {
+export function ResultArea({ state, onRematch, onStartGame }: Props) {
   // 1. 无游戏
   if (!state) {
     return (
       <div className="result-area">
-        <span className="waiting-text">
-          ⏳ 等待 Agent 开始游戏...
-          <br />
-          （在聊天里说"来一局"吧）
-        </span>
+        <button className="rematch-btn" onClick={onStartGame}>
+          👊 开始游戏
+        </button>
       </div>
     )
   }

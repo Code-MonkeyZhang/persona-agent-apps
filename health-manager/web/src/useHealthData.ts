@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import type { GameState, GameHistory, ServerMessage } from './types'
+import type { Profile, Metric, ServerMessage } from './types'
 
 /**
- * WebSocket hook: owns the single source of truth for match state + history.
+ * WebSocket hook: owns the single source of truth for profile + metrics.
  * Auto-reconnects 2s after the socket drops. The server pushes full state
  * on every change, so the frontend stays a pure render layer.
  */
-export function useGameState() {
-  const [state, setState] = useState<GameState | null>(null)
-  const [history, setHistory] = useState<GameHistory[]>([])
+export function useHealthData() {
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [metrics, setMetrics] = useState<Metric[]>([])
   const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
@@ -23,8 +23,9 @@ export function useGameState() {
 
       ws.onmessage = (e) => {
         const msg: ServerMessage = JSON.parse(e.data)
-        setState(msg.state)
-        setHistory(msg.history || [])
+        if (msg.type === 'error') return
+        if (msg.profile !== undefined) setProfile(msg.profile ?? null)
+        if (msg.metrics !== undefined) setMetrics(msg.metrics)
       }
 
       ws.onclose = () => {
@@ -42,17 +43,9 @@ export function useGameState() {
     }
   }, [])
 
-  const sendMove = useCallback((move: string) => {
-    wsRef.current?.send(JSON.stringify({ type: 'move', move }))
+  const setHeight = useCallback((height: number) => {
+    wsRef.current?.send(JSON.stringify({ type: 'set_height', height }))
   }, [])
 
-  const requestRematch = useCallback(() => {
-    wsRef.current?.send(JSON.stringify({ type: 'rematch' }))
-  }, [])
-
-  const requestStartGame = useCallback(() => {
-    wsRef.current?.send(JSON.stringify({ type: 'start_game' }))
-  }, [])
-
-  return { state, history, sendMove, requestRematch, requestStartGame }
+  return { profile, metrics, setHeight }
 }

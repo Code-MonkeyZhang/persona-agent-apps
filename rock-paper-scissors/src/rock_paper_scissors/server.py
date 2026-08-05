@@ -124,6 +124,8 @@ class RpsServer:
         self.state: GameState | None = None
         self._write_stream: object | None = None
         self._ws_clients: set[WebSocket] = set()
+        self._last_agent_id: str = ""
+        self._last_session_id: str = ""
 
     def set_write_stream(self, stream: object) -> None:
         self._write_stream = stream
@@ -339,6 +341,8 @@ class RpsServer:
                     await self._on_user_move(msg.get("move", ""))
                 elif msg.get("type") == "rematch":
                     await self._on_rematch()
+                elif msg.get("type") == "start_game":
+                    await self._on_start_game()
         except WebSocketDisconnect:
             pass
         except Exception as e:
@@ -397,22 +401,34 @@ class RpsServer:
         await self._send_notification(content)
         log("INFO", "rematch_requested")
 
+    async def _on_start_game(self) -> None:
+        """User clicked 'start game' — notify the Agent to begin a match."""
+        if self.state and not self.state.game_over:
+            log("WARN", "start_ignored", reason="match in progress")
+            return
+        content = "用户想开始一局剪刀石头布，请调用 start_game"
+        await self._send_notification(content)
+        log("INFO", "start_game_requested")
+
     async def _send_notification(self, content: str) -> None:
         """Push a notifications/app message through the stdio write stream."""
-        if not self._write_stream or not self.state:
-            log(
-                "WARN",
-                "notification_skipped",
-                reason="no write_stream or no state",
-            )
+        if not self._write_stream:
+            log("WARN", "notification_skipped", reason="no write_stream")
+            return
+
+        agent_id = self.state.agent_id if self.state else self._last_agent_id
+        session_id = self.state.session_id if self.state else self._last_session_id
+
+        if not agent_id or not session_id:
+            log("WARN", "notification_skipped", reason="no agent/session context")
             return
 
         notification = types.JSONRPCNotification(
             jsonrpc="2.0",
             method="notifications/app",
             params={
-                "agentId": self.state.agent_id,
-                "sessionId": self.state.session_id,
+                "agentId": agent_id,
+                "sessionId": session_id,
                 "source": SOURCE,
                 "content": content,
             },
@@ -438,11 +454,18 @@ def create_http_app(server: RpsServer) -> Starlette:
     async def icon(_request):
         return FileResponse(ICON_PATH)
 
+    async def mobile_page(_request):
+        return FileResponse(UI_DIR / "mobile.html")
+
     routes = [
         Route("/icon.png", icon),
+        Route("/mobile", mobile_page),
         WebSocketRoute("/ws", server.handle_websocket),
+        # Mobile page derives its WS URL from its own path (/mobile → /mobile/ws),
+        # so expose a second WS endpoint sharing the same handler.
+        WebSocketRoute("/mobile/ws", server.handle_websocket),
         # Static UI build (index.html + assets/). html=True serves
-        # index.html at "/". Must be last so /icon.png and /ws win first.
+        # index.html at "/". Must be last so /icon.png, /mobile, /ws win first.
         Mount(
             "/",
             app=StaticFiles(directory=str(UI_DIR), html=True),
@@ -462,6 +485,13 @@ def _make_handlers(server: RpsServer):
     async def handle_call_tool(_ctx, params) -> types.CallToolResult:
         args = params.arguments or {}
         name = params.name
+
+        agent_id = args.get("agentId", "")
+        session_id = args.get("sessionId", "")
+        if agent_id:
+            server._last_agent_id = agent_id
+        if session_id:
+            server._last_session_id = session_id
 
         if name == "start_game":
             text = await server.start_game(
