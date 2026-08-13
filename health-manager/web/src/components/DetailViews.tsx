@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+import NumberFlow from '@number-flow/react'
 import type { Metric } from '../types'
 import { WeightChart } from './WeightChart'
 import { BloodPressureChart } from './BloodPressureChart'
@@ -10,7 +12,7 @@ function MetricHero({
   change,
   extra,
 }: {
-  value: string
+  value: ReactNode
   unit: string
   change: number | null
   extra?: string
@@ -20,11 +22,11 @@ function MetricHero({
     .join(' · ')
   return (
     <>
-      <div className="big-number">
+      <div className="px-1 pb-0.5 pt-1 text-[40px] font-bold leading-tight mobile:text-[44px]">
         {value}
-        <span className="big-unit">{unit}</span>
+        <span className="ml-1 text-xl font-normal text-muted-foreground">{unit}</span>
       </div>
-      {sub && <div className="big-change">{sub}</div>}
+      {sub && <div className="px-1 pb-4 text-[15px] text-muted-foreground">{sub}</div>}
     </>
   )
 }
@@ -42,7 +44,7 @@ export function WeightDetail({ metrics }: DetailProps) {
   return (
     <>
       <MetricHero
-        value={latest ? String(latest.weight) : '——'}
+        value={latest && latest.weight != null ? <NumberFlow value={latest.weight} className="tabular-nums" /> : '——'}
         unit="kg"
         change={change}
       />

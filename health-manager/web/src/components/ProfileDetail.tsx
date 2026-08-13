@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import type { Profile, Metric } from '../types'
 import { calcBMI, bmiCategory, latestAndPrev } from '../helpers'
+import { Card, Row, SectionLabel } from './ui/primitives'
+import { Input } from './ui/input'
+import { Button } from './ui/button'
 
 interface Props {
   profile: Profile | null
@@ -27,25 +30,25 @@ export function ProfileDetail({ profile, metrics, onSetHeight }: Props) {
 
   return (
     <>
-      <div className="big-number">
+      <div className="px-1 pb-0.5 pt-1 text-[40px] font-bold leading-tight mobile:text-[44px]">
         {height ?? '——'}
-        {height && <span className="big-unit">cm</span>}
+        {height && <span className="ml-1 text-xl font-normal text-muted-foreground">cm</span>}
       </div>
 
-      <div className="section-label">基本信息</div>
-      <div className="card-group">
-        <div className="metric-row static-row metric-row-bordered">
-          <span className="metric-row-label">身高</span>
-          <span className="metric-row-value">{height ? `${height} cm` : '未设置'}</span>
-        </div>
-        <div className="metric-row static-row metric-row-bordered">
-          <span className="metric-row-label">BMI</span>
-          <span className="metric-row-value">
+      <SectionLabel>基本信息</SectionLabel>
+      <Card>
+        <Row>
+          <span>身高</span>
+          <span className="font-medium">{height ? `${height} cm` : '未设置'}</span>
+        </Row>
+        <Row>
+          <span>BMI</span>
+          <span className="flex items-center gap-2 font-medium">
             {bmi !== null ? (
               <>
                 {bmi}
                 <span
-                  className="bmi-tag"
+                  className="rounded-md px-2 py-0.5 text-xs font-semibold text-white"
                   style={{ background: bmiCategory(bmi).color }}
                 >
                   {bmiCategory(bmi).label}
@@ -55,31 +58,15 @@ export function ProfileDetail({ profile, metrics, onSetHeight }: Props) {
               '——'
             )}
           </span>
-        </div>
+        </Row>
         {!editing ? (
-          <div
-            className="metric-row"
-            role="button"
-            tabIndex={0}
-            onClick={() => {
-              setInput(height ? String(height) : '')
-              setEditing(true)
-            }}
-            onKeyDown={(e) =>
-              e.key === 'Enter' &&
-              (() => {
-                setInput(height ? String(height) : '')
-                setEditing(true)
-              })()
-            }
-          >
-            <span className="metric-row-label">修改身高</span>
-            <span className="metric-row-chevron">›</span>
-          </div>
+          <Row bordered={false} onClick={() => { setInput(height ? String(height) : ''); setEditing(true) }} onKeyDown={(e) => e.key === 'Enter' && (() => { setInput(height ? String(height) : ''); setEditing(true) })()} role="button" tabIndex={0}>
+            <span>修改身高</span>
+            <span className="ml-0.5 text-xl font-light text-[#c7c7cc]">›</span>
+          </Row>
         ) : (
-          <div className="metric-row edit-row">
-            <input
-              className="edit-input"
+          <div className="flex min-h-12 items-center gap-2 px-4 py-3.5">
+            <Input
               type="number"
               placeholder="身高 cm"
               value={input}
@@ -87,15 +74,11 @@ export function ProfileDetail({ profile, metrics, onSetHeight }: Props) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             />
-            <button className="btn-primary" onClick={handleSubmit}>
-              保存
-            </button>
-            <button className="btn-cancel" onClick={() => setEditing(false)}>
-              取消
-            </button>
+            <Button onClick={handleSubmit}>保存</Button>
+            <Button variant="outline" onClick={() => setEditing(false)}>取消</Button>
           </div>
         )}
-      </div>
+      </Card>
     </>
   )
 }

@@ -1,4 +1,6 @@
+import { motion, useReducedMotion } from 'motion/react'
 import type { Metric } from '../types'
+import { Card, Row, SectionLabel } from './ui/primitives'
 
 interface Props {
   metrics: Metric[]
@@ -7,9 +9,8 @@ interface Props {
 }
 
 export function HistoryList({ metrics, filter, formatValue }: Props) {
-  const records = metrics
-    .filter(filter)
-    .sort((a, b) => b.date.localeCompare(a.date))
+  const reduce = useReducedMotion()
+  const records = metrics.filter(filter).sort((a, b) => b.date.localeCompare(a.date))
 
   if (records.length === 0) {
     return null
@@ -17,18 +18,26 @@ export function HistoryList({ metrics, filter, formatValue }: Props) {
 
   return (
     <>
-      <div className="section-label">历史记录</div>
-      <div className="card-group">
+      <SectionLabel>历史记录</SectionLabel>
+      <Card>
         {records.map((r, i) => (
-          <div
+          <motion.div
             key={r.date}
-            className={`metric-row static-row${i === records.length - 1 ? '' : ' metric-row-bordered'}`}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: 0.2,
+              ease: [0.23, 1, 0.32, 1],
+              delay: Math.min(i * 0.04, 0.16),
+            }}
           >
-            <span className="metric-row-label date-label">{r.date}</span>
-            <span className="metric-row-value">{formatValue(r)}</span>
-          </div>
+            <Row bordered={i !== records.length - 1}>
+              <span className="text-[15px] text-muted-foreground">{r.date}</span>
+              <span className="font-medium">{formatValue(r)}</span>
+            </Row>
+          </motion.div>
         ))}
-      </div>
+      </Card>
     </>
   )
 }

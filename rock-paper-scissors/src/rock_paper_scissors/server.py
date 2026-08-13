@@ -41,6 +41,7 @@ from .game import (
     match_winner,
 )
 from .log import initialize as log_init, log
+from .prompts import load_prompt
 
 APP_ROOT = Path(__file__).resolve().parent.parent.parent
 UI_DIR = APP_ROOT / "ui"
@@ -69,10 +70,7 @@ _INJECTED_PARAMS = {
 TOOLS = [
     types.Tool(
         name="start_game",
-        description=(
-            "开始一局剪刀石头布（三局两胜）。调用后用户会在面板出招，"
-            "你收到通知后再出招。先赢两局者赢得整场。"
-        ),
+        description=load_prompt("start_game"),
         inputSchema={
             "type": "object",
             "properties": dict(_INJECTED_PARAMS),
@@ -80,7 +78,7 @@ TOOLS = [
     ),
     types.Tool(
         name="play_move",
-        description="出招。收到用户出招通知后调用。单局平局会重出，不计分。",
+        description=load_prompt("play_move"),
         inputSchema={
             "type": "object",
             "required": ["move"],
@@ -96,7 +94,7 @@ TOOLS = [
     ),
     types.Tool(
         name="get_game_state",
-        description="查询当前比赛状态和比分。",
+        description=load_prompt("get_game_state"),
         inputSchema={
             "type": "object",
             "properties": dict(_INJECTED_PARAMS),
@@ -104,7 +102,15 @@ TOOLS = [
     ),
     types.Tool(
         name="get_game_history",
-        description="查询历史对局记录。",
+        description=load_prompt("get_game_history"),
+        inputSchema={
+            "type": "object",
+            "properties": dict(_INJECTED_PARAMS),
+        },
+    ),
+    types.Tool(
+        name="end_game",
+        description=load_prompt("end_game"),
         inputSchema={
             "type": "object",
             "properties": dict(_INJECTED_PARAMS),
@@ -123,9 +129,10 @@ class RpsServer:
         self.db = HistoryDB(DATA_DIR / "history.db")
         self.state: GameState | None = None
         self._write_stream: object | None = None
-        self._ws_clients: set[WebSocket] = set()
-        self._last_agent_id: str = ""
-        self._last_session_id: str = ""
+        # 每条 WS 连接绑定其 (agentId, sessionId)，由 webview URL 的 query 参数传入。
+        # 平台不通过 env 注入 agent/session，只能从工具调用或 WS 连接获取；
+        # WS query 让"用户首次操作"也能立即带上通知所需的上下文。
+        self._ws_clients: dict[WebSocket, tuple[str, str]] = {}
 
     def set_write_stream(self, stream: object) -> None:
         self._write_stream = stream
@@ -164,6 +171,43 @@ class RpsServer:
         return (
             f"游戏已开始！三局两胜，先赢{WINS_NEEDED}局者获胜。"
             "请用户在右侧面板出招。"
+        )
+
+    async def _end_current_match(self, by: str) -> None:
+        """End the in-progress match as a forfeit (winner=None).
+
+        Shared by the MCP end_game tool and the WS end_game button.
+        Caller must guard: only call when a match exists and is in progress.
+        """
+        self.state.game_over = True
+        self.state.waiting_for_agent = False
+        self.state.user_move_pending = None
+        self.db.end_game(
+            self.state.game_id,
+            self.state.user_score,
+            self.state.agent_score,
+            None,
+        )
+        log(
+            "INFO",
+            "match_ended_by_request",
+            by=by,
+            game_id=self.state.game_id,
+            score=f"{self.state.user_score}:{self.state.agent_score}",
+        )
+        await self._push_state()
+
+    async def end_game(self) -> str:
+        """End the current match as a forfeit (Agent-initiated)."""
+        if not self.state:
+            return "暂无比赛进行中"
+        if self.state.game_over:
+            return "整场已结束，请调用 start_game 开始新一场"
+        await self._end_current_match(by="agent")
+        return (
+            f"本局已结束（中途结束），"
+            f"最终比分 用户{self.state.user_score}:"
+            f"Agent{self.state.agent_score}"
         )
 
     async def play_move(
@@ -323,8 +367,15 @@ class RpsServer:
 
     async def handle_websocket(self, websocket: WebSocket) -> None:
         await websocket.accept()
-        self._ws_clients.add(websocket)
-        log("INFO", "ws_connected", clients=len(self._ws_clients))
+        agent_id = websocket.query_params.get("agentId", "")
+        session_id = websocket.query_params.get("sessionId", "")
+        self._ws_clients[websocket] = (agent_id, session_id)
+        log(
+            "INFO",
+            "ws_connected",
+            clients=len(self._ws_clients),
+            has_context=bool(agent_id and session_id),
+        )
 
         await websocket.send_json(
             {
@@ -337,18 +388,21 @@ class RpsServer:
         try:
             while True:
                 msg = await websocket.receive_json()
-                if msg.get("type") == "move":
-                    await self._on_user_move(msg.get("move", ""))
-                elif msg.get("type") == "rematch":
-                    await self._on_rematch()
-                elif msg.get("type") == "start_game":
-                    await self._on_start_game()
+                mtype = msg.get("type")
+                if mtype == "move":
+                    await self._on_user_move(websocket, msg.get("move", ""))
+                elif mtype == "rematch":
+                    await self._on_rematch(websocket)
+                elif mtype == "start_game":
+                    await self._on_start_game(websocket)
+                elif mtype == "end_game":
+                    await self._on_end_game(websocket)
         except WebSocketDisconnect:
             pass
         except Exception as e:
             log("WARN", "ws_error", error=str(e))
         finally:
-            self._ws_clients.discard(websocket)
+            self._ws_clients.pop(websocket, None)
             log(
                 "INFO",
                 "ws_disconnected",
@@ -367,7 +421,7 @@ class RpsServer:
             }
         )
 
-    async def _on_user_move(self, move: str) -> None:
+    async def _on_user_move(self, ws: WebSocket, move: str) -> None:
         """Record the user's move and notify the Agent."""
         if move not in VALID_MOVES:
             log("WARN", "invalid_move", move=move)
@@ -384,11 +438,10 @@ class RpsServer:
         self.state.last_user_move = move
         self.state.waiting_for_agent = True
 
-        content = "用户已出招，轮到你出招了"
-        await self._send_notification(content)
+        await self._send_notification(ws, "用户已出招，轮到你出招了")
         await self._push_state()
 
-    async def _on_rematch(self) -> None:
+    async def _on_rematch(self, ws: WebSocket) -> None:
         """User clicked 'rematch' — notify the Agent to start a new match."""
         if not self.state or not self.state.game_over:
             log(
@@ -397,28 +450,43 @@ class RpsServer:
                 reason="no finished match to rematch",
             )
             return
-        content = "用户想再来一局，请调用 start_game 开始新一场"
-        await self._send_notification(content)
+        await self._send_notification(
+            ws, "用户想再来一局，请调用 start_game 开始新一场"
+        )
         log("INFO", "rematch_requested")
 
-    async def _on_start_game(self) -> None:
+    async def _on_start_game(self, ws: WebSocket) -> None:
         """User clicked 'start game' — notify the Agent to begin a match."""
         if self.state and not self.state.game_over:
             log("WARN", "start_ignored", reason="match in progress")
             return
-        content = "用户想开始一局剪刀石头布，请调用 start_game"
-        await self._send_notification(content)
+        await self._send_notification(
+            ws, "用户想开始一局剪刀石头布，请调用 start_game"
+        )
         log("INFO", "start_game_requested")
 
-    async def _send_notification(self, content: str) -> None:
-        """Push a notifications/app message through the stdio write stream."""
+    async def _on_end_game(self, ws: WebSocket) -> None:
+        """User clicked 'end game' — end the match immediately and notify Agent."""
+        if not self.state or self.state.game_over:
+            log("WARN", "end_game_ignored", reason="no match or match over")
+            return
+        await self._send_notification(ws, "用户已结束本局（中途结束）")
+        await self._end_current_match(by="user")
+
+    async def _send_notification(
+        self, ws: WebSocket, content: str
+    ) -> None:
+        """Push a notifications/app message through the stdio write stream.
+
+        Context (agentId/sessionId) comes from the triggering WS connection's
+        query params — set by the desktop when it loads the app webview. Falls
+        back to skipping with a warning if the platform didn't pass context.
+        """
         if not self._write_stream:
             log("WARN", "notification_skipped", reason="no write_stream")
             return
 
-        agent_id = self.state.agent_id if self.state else self._last_agent_id
-        session_id = self.state.session_id if self.state else self._last_session_id
-
+        agent_id, session_id = self._ws_clients.get(ws, ("", ""))
         if not agent_id or not session_id:
             log("WARN", "notification_skipped", reason="no agent/session context")
             return
@@ -444,7 +512,8 @@ class RpsServer:
                 await ws.send_json(data)
             except Exception:
                 dead.add(ws)
-        self._ws_clients -= dead
+        for ws in dead:
+            self._ws_clients.pop(ws, None)
 
 
 # --- Starlette HTTP app -----------------------------------------------------
@@ -486,13 +555,6 @@ def _make_handlers(server: RpsServer):
         args = params.arguments or {}
         name = params.name
 
-        agent_id = args.get("agentId", "")
-        session_id = args.get("sessionId", "")
-        if agent_id:
-            server._last_agent_id = agent_id
-        if session_id:
-            server._last_session_id = session_id
-
         if name == "start_game":
             text = await server.start_game(
                 args.get("agentId", ""), args.get("sessionId", "")
@@ -507,6 +569,8 @@ def _make_handlers(server: RpsServer):
             text = server.get_game_state()
         elif name == "get_game_history":
             text = server.get_game_history()
+        elif name == "end_game":
+            text = await server.end_game()
         else:
             text = f"未知工具: {name}"
 
@@ -533,7 +597,7 @@ async def run() -> None:
     server = RpsServer()
     http_app = create_http_app(server)
 
-    mcp = Server(SOURCE)
+    mcp = Server(SOURCE, version="0.1.0", instructions=load_prompt("instructions"))
     handle_list, handle_call = _make_handlers(server)
     mcp.add_request_handler(
         "tools/list", types.PaginatedRequestParams, handle_list

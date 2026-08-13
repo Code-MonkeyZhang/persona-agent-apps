@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 
 // base: './' is mandatory — the UI is served via reverse proxy at
@@ -9,7 +10,12 @@ import { fileURLToPath, URL } from 'node:url'
 // each HTML filename in the output, so the server serves / for desktop and
 // /mobile for mobile.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   base: './',
   build: {
     outDir: '../ui',

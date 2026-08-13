@@ -1,0 +1,124 @@
+@import 'tailwindcss';
+
+/* Mobile entry wraps the app in .mobile-app; this variant scopes overrides. */
+@custom-variant mobile (&:where(.mobile-app, .mobile-app *));
+
+/* Touch-safe hover: stack the built-in `pointer-fine` media variant with
+ * `hover:` (e.g. pointer-fine:hover:bg-muted). Touch screens trigger :hover
+ * on tap and would leave styles stuck; gating on pointer-fine prevents that.
+ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Strong easing curves — extend Tailwind's built-in ease-* utilities rather
+   * than forking. Built-in ease-out / ease-in-out are too weak for deliberate
+   * UI motion; these are the curves the design standards require.
+   */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+:root {
+  --background: #f2f2f7;
+  --foreground: #1c1c1e;
+  --card: #ffffff;
+  --card-foreground: #1c1c1e;
+  --muted: #f2f2f7;
+  --muted-foreground: #8e8e93;
+  --border: #e5e5ea;
+  --input: #e5e5ea;
+  --primary: #14b8a6;
+  --primary-foreground: #ffffff;
+  --destructive: #ef4444;
+  --ring: #14b8a6;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+      Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Visible focus for keyboard users — never remove without a replacement. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Pressable element feedback: a subtle scale-down on :active, reused by every
+ * button. Transitions transform (the press) plus color/opacity (hover tints),
+ * all GPU-friendly. scale() carries children along, which reads as a physical
+ * press.
+ */
+.press {
+  transition-property: transform, background-color, opacity, color;
+  transition-duration: 160ms;
+  transition-timing-function: var(--ease-out);
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+/* Translucent glass surface (apple-design Materials & depth): blur plus a
+ * bright edge reads as light catching the material, so it floats above the
+ * background instead of sitting flat. Heavier than a plain card by intent.
+ */
+.glass {
+  background-color: rgb(255 255 255 / 0.6);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgb(255 255 255 / 0.5);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.04),
+    0 4px 16px rgb(0 0 0 / 0.06),
+    0 1px 3px rgb(0 0 0 / 0.04);
+}
+
+/* Reduced motion: fewer and gentler, not zero. Keep color/opacity feedback
+ * (aids comprehension), drop geometric (transform) motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .press {
+    transition-property: background-color, opacity, color;
+  }
+  .press:active {
+    transform: none;
+  }
+}
+
+/* Reduced transparency: frost the glass into a solid surface for users who
+ * asked for less translucency.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background-color: var(--card);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: var(--border);
+  }
+}

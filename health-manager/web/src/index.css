@@ -1,0 +1,164 @@
+@import 'tailwindcss';
+
+/* Mobile entry wraps the app in .mobile-app; this variant scopes overrides,
+   replacing the old mobile.css. */
+@custom-variant mobile (&:where(.mobile-app, .mobile-app *));
+
+/* Touch-safe hover: stack the built-in `pointer-fine` media variant with
+ * `hover:` (e.g. pointer-fine:hover:bg-muted). Touch screens trigger :hover
+ * on tap and would leave styles stuck; gating on pointer-fine prevents that.
+ */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-destructive: var(--destructive);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Strong easing curves — extend Tailwind's built-in ease-* utilities rather
+   * than forking. Built-in ease-out / ease-in-out are too weak for deliberate
+   * UI motion; these are the curves the design standards require.
+   */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+:root {
+  --background: #f2f2f7;
+  --foreground: #1c1c1e;
+  --card: #ffffff;
+  --card-foreground: #1c1c1e;
+  --muted: #f2f2f7;
+  --muted-foreground: #8e8e93;
+  --border: #e5e5ea;
+  --input: #e5e5ea;
+  --primary: #14b8a6;
+  --primary-foreground: #ffffff;
+  --destructive: #ef4444;
+  --ring: #14b8a6;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+      Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Visible focus for keyboard users — never remove without a replacement. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Pressable element feedback: a subtle scale-down on :active, reused by every
+ * button. Transitions transform (the press) plus color/opacity (hover tints),
+ * all GPU-friendly. scale() carries children along, which reads as a physical
+ * press.
+ */
+.press {
+  transition-property: transform, background-color, opacity, color;
+  transition-duration: 160ms;
+  transition-timing-function: var(--ease-out);
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+/* Reduced motion: fewer and gentler, not zero. Keep color/opacity feedback
+ * (aids comprehension), drop geometric (transform) motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .press {
+    transition-property: background-color, opacity, color;
+  }
+  .press:active {
+    transform: none;
+  }
+}
+
+/* react-calendar — strip the default blue theme, align with our Apple Health
+ * white-card aesthetic. Layout (flex grid) comes from the imported Calendar.css;
+ * these rules only override colors, spacing, and shape.
+ */
+.react-calendar {
+  width: 100%;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+}
+
+.react-calendar__navigation {
+  margin-bottom: 4px;
+}
+
+.react-calendar__navigation button {
+  min-width: 36px;
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.react-calendar__navigation button:enabled:hover,
+.react-calendar__navigation button:enabled:focus {
+  background: var(--muted);
+}
+
+.react-calendar__month-view__weekdays {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+}
+
+.react-calendar__month-view__weekdays__weekday abbr {
+  text-decoration: none;
+}
+
+.react-calendar__tile {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 8px 4px;
+  color: var(--foreground);
+  font-size: 14px;
+}
+
+.react-calendar__tile:enabled:hover {
+  background: var(--muted);
+}
+
+.react-calendar__tile--now {
+  background: rgba(20, 184, 166, 0.1);
+  font-weight: 600;
+}
+
+.react-calendar__tile--now:enabled:hover {
+  background: rgba(20, 184, 166, 0.15);
+}
+
+.react-calendar__month-view__days__day--neighboringMonth {
+  color: var(--muted-foreground);
+  opacity: 0.4;
+}

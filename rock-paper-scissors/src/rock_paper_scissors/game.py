@@ -28,12 +28,6 @@ MOVE_LABELS: dict[Move, str] = {
     "scissors": "剪刀",
 }
 
-MOVE_EMOJI: dict[Move, str] = {
-    "rock": "✊",
-    "paper": "✋",
-    "scissors": "✌️",
-}
-
 RESULT_TEXT: dict[Result, str] = {
     "user_win": "用户赢",
     "agent_win": "Agent赢",

@@ -22,7 +22,7 @@ export function Sparkline({ data, color }: Props) {
 
   return (
     <svg
-      className="sparkline"
+      className="mt-1.5 h-8 w-full mobile:h-9"
       viewBox={`0 0 ${w} ${h}`}
       preserveAspectRatio="none"
       aria-hidden="true"

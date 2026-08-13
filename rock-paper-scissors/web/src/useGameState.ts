@@ -5,6 +5,10 @@ import type { GameState, GameHistory, ServerMessage } from './types'
  * WebSocket hook: owns the single source of truth for match state + history.
  * Auto-reconnects 2s after the socket drops. The server pushes full state
  * on every change, so the frontend stays a pure render layer.
+ *
+ * The page is loaded by the desktop with ?agentId&sessionId in the URL; those
+ * are forwarded as the WS query string so the server can attribute user
+ * actions (start/move/rematch) to the right agent+session for notifications.
  */
 export function useGameState() {
   const [state, setState] = useState<GameState | null>(null)
@@ -18,7 +22,8 @@ export function useGameState() {
     const connect = () => {
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
       const base = location.host + location.pathname.replace(/\/$/, '')
-      const ws = new WebSocket(proto + '//' + base + '/ws')
+      const ctx = location.search // ?agentId=...&sessionId=...
+      const ws = new WebSocket(proto + '//' + base + '/ws' + ctx)
       wsRef.current = ws
 
       ws.onmessage = (e) => {
@@ -54,5 +59,9 @@ export function useGameState() {
     wsRef.current?.send(JSON.stringify({ type: 'start_game' }))
   }, [])
 
-  return { state, history, sendMove, requestRematch, requestStartGame }
+  const requestEndGame = useCallback(() => {
+    wsRef.current?.send(JSON.stringify({ type: 'end_game' }))
+  }, [])
+
+  return { state, history, sendMove, requestRematch, requestStartGame, requestEndGame }
 }
