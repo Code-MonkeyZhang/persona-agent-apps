@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { formatDuration } from '../lib/utils'
 import type { FocusSession } from '../types'
 
 function timeOnly(iso: string): string {
@@ -23,8 +24,8 @@ export function DayDetail({
       .sort((a, b) => a.started_at.localeCompare(b.started_at))
   }, [sessions, selectedDate])
 
-  const totalMinutes = daySessions.reduce(
-    (sum, s) => sum + s.duration_min,
+  const totalSeconds = daySessions.reduce(
+    (sum, s) => sum + s.duration_sec,
     0
   )
 
@@ -43,7 +44,7 @@ export function DayDetail({
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-[14px] font-semibold">{dateLabel}</h3>
         <span className="text-[13px] text-muted-foreground tabular-nums">
-          共 {totalMinutes} 分钟
+          共 {formatDuration(totalSeconds)}
         </span>
       </div>
       {daySessions.length === 0 ? (
@@ -63,7 +64,7 @@ export function DayDetail({
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="tabular-nums text-muted-foreground">
-                  {s.duration_min}min
+                  {formatDuration(s.duration_sec)}
                 </span>
                 <span
                   className={

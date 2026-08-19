@@ -19,7 +19,7 @@ export function RoundDisplay({
           <button
             onClick={() => onAdjustRounds(-1)}
             className="press text-muted-foreground pointer-fine:hover:text-foreground"
-            disabled={total <= 2}
+            disabled={total <= 1}
           >
             <ChevronLeft className="h-5 w-5" />
           </button>

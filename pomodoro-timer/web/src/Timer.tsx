@@ -45,7 +45,7 @@ export function Timer({ className }: { className?: string }) {
     sendUpdateSettings({
       ...state.settings,
       focus_per_round: Math.max(
-        2,
+        1,
         Math.min(8, state.settings.focus_per_round + delta)
       ),
     })

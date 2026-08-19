@@ -20,7 +20,7 @@ export interface FocusSession {
   id: number
   started_at: string
   ended_at: string
-  duration_min: number
+  duration_sec: number
   intent: string
   completed: number
   agent_id: string
@@ -29,7 +29,7 @@ export interface FocusSession {
 
 export interface Stats {
   today_count: number
-  today_minutes: number
+  today_seconds: number
   week_count: number
-  week_minutes: number
+  week_seconds: number
 }

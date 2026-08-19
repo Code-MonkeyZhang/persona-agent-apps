@@ -64,7 +64,7 @@ idle ──(开始)──→ focus ──(倒计时归零)──→ break ──
 |---|---|---|---|
 | 工作时长 | 25 分钟 | 1–90 | 左侧圆 ▲▼ |
 | 休息时长 | 5 分钟 | 1–30 | 右侧圆 ▲▼ |
-| 每轮番茄钟个数 | 4 个 | 2–8 | 顶部 +/- 按钮 |
+| 每轮番茄钟个数 | 4 个 | 1–8 | 顶部 +/- 按钮 |
 
 长休息 = 休息时长 × 3，自动触发，不单独设置。
 
@@ -202,8 +202,8 @@ Agent App 在**三个时刻**通过 `notifications/app` 主动推送通知给 Ag
 
 | 时机 | 记录 | completed |
 |---|---|---|
-| 专注自然结束（倒计时归零） | duration_min = 设定时长，intent = 用户填的意图 | 1 |
-| 专注被停止（用户 UI 停止或 Agent 调 stop） | duration_min = 实际已专注分钟数（向下取整），intent = 用户填的意图 | 0 |
+| 专注自然结束（倒计时归零） | duration_sec = 设定时长（秒），intent = 用户填的意图 | 1 |
+| 专注被停止（用户 UI 停止或 Agent 调 stop） | duration_sec = 实际已专注秒数（≥1 秒才记录），intent = 用户填的意图 | 0 |
 | 专注中暂停后未恢复 | 不记录（暂停不是结束） | — |
 | 休息被停止 / 跳过 | 不记录（休息不记录） | — |
 
@@ -260,7 +260,7 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     started_at   TEXT NOT NULL,     -- ISO 8601 datetime
     ended_at     TEXT NOT NULL,
-    duration_min INTEGER NOT NULL,
+    duration_sec INTEGER NOT NULL,  -- v3 起秒级精度（v1/v2 为 duration_min 分钟，迁移时 ×60 回填）
     intent       TEXT DEFAULT '',
     completed    INTEGER NOT NULL DEFAULT 1,  -- 0=中断 1=完成
     agent_id     TEXT DEFAULT '',
@@ -405,7 +405,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
 
 **场景二：番茄钟自然结束。** 25 分钟到了，倒计时归零，Agent App 自动启动 5 分钟休息，后端写入专注记录。面板显示灰色倒计时和"休息中"。Agent 收到"专注已结束，守护模式解除"通知。
 
-**场景三：用户中途停止。** 用户专注了 12 分钟后有急事，点击停止。后端记录（duration_min=12, completed=0），面板回到设置态。Agent 收到"专注已结束，守护模式解除"通知。
+**场景三：用户中途停止。** 用户专注了 12 分 30 秒后有急事，点击停止。后端记录（duration_sec=750, completed=0），面板回到设置态。Agent 收到"专注已结束，中途停止，已专注 12 分 30 秒。守护模式解除"通知。
 
 **场景四：Agent 帮用户开始。** 用户在对话中说"帮我开一个 30 分钟的番茄钟，我要看论文"。Agent 调用 `start(intent="看论文", duration_min=30)`。计时器启动，Web UI 同步切换到计时态。Agent 也收到专注开始通知，进入守护模式——后续如果用户跑题，Agent 会提醒用户回到专注。
 

@@ -6,6 +6,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Format seconds as a human-readable duration: "25 分钟" / "30 秒" / "4 分 30 秒". */
+export function formatDuration(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  if (seconds === 0) return `${minutes} 分钟`
+  if (minutes === 0) return `${seconds} 秒`
+  return `${minutes} 分 ${seconds} 秒`
+}
+
 /** Format an ISO timestamp as a short relative label: "今天 14:30". */
 export function formatTime(iso: string): string {
   const d = new Date(iso)
