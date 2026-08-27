@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from 'motion/react'
 import type { DietEntry, Meal } from '../types'
 import { mealMeta } from '../macroMeta'
+import { useI18n } from '../i18n'
 import { Card, Row } from './ui/primitives'
 
 // Render order; null covers any entry without an explicit meal
@@ -16,6 +17,7 @@ interface Props {
  */
 export function MealList({ entries }: Props) {
   const reduce = useReducedMotion()
+  const { t } = useI18n()
 
   // Pre-filter visible meals so stagger indices stay contiguous (skipping
   // empty meals would otherwise leave gaps in the delay sequence).
@@ -44,7 +46,7 @@ export function MealList({ entries }: Props) {
           <div className="flex items-center justify-between px-1 pb-1.5">
             <span className="flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground">
               <b.Icon size={14} />
-              {b.label}
+              {t(b.label)}
             </span>
             <span className="text-[13px] text-muted-foreground">{b.subtotal} kcal</span>
           </div>

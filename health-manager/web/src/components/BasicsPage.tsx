@@ -3,7 +3,9 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Settings as SettingsIcon } from 'lucide-react'
 import type { BasicsState, DietState, FitnessState, GoalMode, Tab } from '../types'
 import { buildSummary, type SummaryCard, type TagTone } from '../summary'
-import { formatDateCn, todayStr } from '../helpers'
+import { formatDate, todayStr } from '../helpers'
+import { useI18n } from '../i18n'
+import type { TKey } from '../i18n/locales'
 import { pushVariants, fadeVariants, PAGE_TRANSITION } from '@/lib/transitions'
 import { Sparkline } from './Sparkline'
 import { DetailHeader } from './DetailHeader'
@@ -15,10 +17,10 @@ import { Tile } from './ui/primitives'
 
 type Detail = 'none' | 'settings' | 'profile' | 'weight' | 'blood_pressure'
 
-const DETAIL_TITLES: Record<Exclude<Detail, 'none' | 'settings'>, string> = {
-  profile: '基本信息',
-  weight: '体重',
-  blood_pressure: '血压',
+const DETAIL_TITLES: Record<Exclude<Detail, 'none' | 'settings'>, TKey> = {
+  profile: 'detail.profile',
+  weight: 'metric.weight',
+  blood_pressure: 'metric.bloodPressure',
 }
 
 const TAG_VARIANT: Record<TagTone, 'warn' | 'notice' | 'info'> = {
@@ -65,7 +67,8 @@ export function BasicsPage({
   const [detail, setDetailState] = useState<Detail>('none')
   const [dir, setDir] = useState(0)
   const reduce = useReducedMotion()
-  const { status, cards } = buildSummary(basics, diet, fitness)
+  const { t, locale } = useI18n()
+  const { status, cards } = buildSummary(basics, diet, fitness, t)
 
   const openDetail = (d: Exclude<Detail, 'none'>) => {
     setDir(1)
@@ -118,7 +121,7 @@ export function BasicsPage({
           exit="exit"
           transition={PAGE_TRANSITION}
         >
-          <DetailHeader title={DETAIL_TITLES[detail]} onBack={closeDetail} />
+          <DetailHeader title={t(DETAIL_TITLES[detail])} onBack={closeDetail} />
           {detail === 'profile' && (
             <ProfileDetail profile={basics.profile} metrics={basics.metrics} onSetHeight={onSetHeight} />
           )}
@@ -167,28 +170,32 @@ function HomeHeader({
   status: string
   onSettings: () => void
 }) {
+  const { t, locale } = useI18n()
   return (
     <div className="relative px-1 pb-5 pt-2">
       <button
         onClick={onSettings}
-        aria-label="设置"
+        aria-label={t('common.settings')}
         className="press absolute right-1 top-1.5 flex items-center justify-center border-none bg-none p-1.5 text-muted-foreground active:text-primary"
       >
         <SettingsIcon size={22} />
       </button>
-      <div className="text-[13px] text-muted-foreground">{formatDateCn(todayStr())}</div>
-      <div className="my-1 text-[28px] font-bold">{name || '你好'}</div>
+      <div className="text-[13px] text-muted-foreground">
+        {formatDate(todayStr(), locale)}
+      </div>
+      <div className="my-1 text-[28px] font-bold">{name || t('home.hello')}</div>
       <div className="text-base">{status}</div>
     </div>
   )
 }
 
 function SummaryTile({ card, onClick }: { card: SummaryCard; onClick: () => void }) {
+  const { t } = useI18n()
   return (
     <Tile onClick={onClick}>
       <div className="flex w-full items-center justify-between">
         <span className="text-[13px] font-medium text-muted-foreground">{card.label}</span>
-        {card.tag && <Badge variant={TAG_VARIANT[card.tagTone ?? 'info']}>{card.tag}</Badge>}
+        {card.tag && <Badge variant={TAG_VARIANT[card.tagTone ?? 'info']}>{t(card.tag)}</Badge>}
       </div>
       <span className="text-2xl font-bold leading-tight">
         {card.value}

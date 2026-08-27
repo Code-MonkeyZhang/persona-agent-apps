@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { useHealthData } from './useHealthData'
 import type { Tab } from './types'
+import { useI18n } from './i18n'
 import { cn } from '@/lib/utils'
 import { TabBar } from './components/TabBar'
 import { BasicsPage } from './components/BasicsPage'
@@ -24,6 +25,7 @@ export function HealthApp({ className }: { className: string }) {
     setMacroGoals,
     toggleMock,
   } = useHealthData()
+  const { t } = useI18n()
   const [tab, setTab] = useState<Tab>('summary')
   const reduce = useReducedMotion()
 
@@ -65,7 +67,7 @@ export function HealthApp({ className }: { className: string }) {
             {tab === 'fitness' && <FitnessPage fitness={fitness} />}
             {tab === 'disease' && (
               <div className="px-5 py-10 text-center text-[15px] leading-relaxed text-muted-foreground">
-                疾病模块建设中，敬请期待。
+                {t('home.diseasePlaceholder')}
               </div>
             )}
           </motion.div>

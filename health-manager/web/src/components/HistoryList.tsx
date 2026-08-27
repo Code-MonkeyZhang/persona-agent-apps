@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from 'motion/react'
 import type { Metric } from '../types'
+import { useI18n } from '../i18n'
 import { Card, Row, SectionLabel } from './ui/primitives'
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 
 export function HistoryList({ metrics, filter, formatValue }: Props) {
   const reduce = useReducedMotion()
+  const { t } = useI18n()
   const records = metrics.filter(filter).sort((a, b) => b.date.localeCompare(a.date))
 
   if (records.length === 0) {
@@ -18,7 +20,7 @@ export function HistoryList({ metrics, filter, formatValue }: Props) {
 
   return (
     <>
-      <SectionLabel>历史记录</SectionLabel>
+      <SectionLabel>{t('common.history')}</SectionLabel>
       <Card>
         {records.map((r, i) => (
           <motion.div

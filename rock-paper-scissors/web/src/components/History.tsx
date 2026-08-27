@@ -2,13 +2,15 @@ import { motion, useReducedMotion } from 'motion/react'
 import type { Transition } from 'motion/react'
 import { Check, Minus, X } from 'lucide-react'
 import type { GameHistory, RoundResult, Winner } from '../types'
+import type { TKey } from '../i18n/locales'
+import { useI18n } from '../i18n'
 import { MoveIcon } from './MoveIcon'
 import { cn } from '../lib/utils'
 
-const STATUS: Record<string, { label: string; tone: string }> = {
-  user: { label: '你赢', tone: 'text-primary' },
-  agent: { label: '你输', tone: 'text-destructive' },
-  draw: { label: '中途结束', tone: 'text-muted-foreground' },
+const STATUS: Record<string, { label: TKey; tone: string }> = {
+  user: { label: 'history.win', tone: 'text-primary' },
+  agent: { label: 'history.lose', tone: 'text-destructive' },
+  draw: { label: 'history.aborted', tone: 'text-muted-foreground' },
 }
 
 const ROUND_ICON: Record<RoundResult, typeof Check> = {
@@ -27,14 +29,18 @@ function statusOf(winner: Winner | null) {
 
 export function History({ history }: { history: GameHistory[] }) {
   const reduce = useReducedMotion()
+  const { t } = useI18n()
   return (
     <details className="rounded-lg bg-card p-3">
       <summary className="cursor-pointer text-sm font-medium text-foreground">
-        历史记录{history.length > 0 && ` · ${history.length} 场`}
+        {t('history.title')}
+        {history.length > 0 && ` · ${t('history.count', { n: history.length })}`}
       </summary>
       <div className="mt-3 flex flex-col gap-2">
         {history.length === 0 ? (
-          <div className="text-center text-xs text-muted-foreground">暂无记录</div>
+          <div className="text-center text-xs text-muted-foreground">
+            {t('history.empty')}
+          </div>
         ) : (
           history.map((g, i) => {
             const s = statusOf(g.winner)
@@ -57,7 +63,7 @@ export function History({ history }: { history: GameHistory[] }) {
                     {g.userScore} : {g.agentScore}
                   </span>
                   <span className={cn('text-xs font-medium', s.tone)}>
-                    {s.label}
+                    {t(s.label)}
                   </span>
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-1">

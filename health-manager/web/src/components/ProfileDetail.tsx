@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Profile, Metric } from '../types'
 import { calcBMI, bmiCategory, latestAndPrev } from '../helpers'
+import { useI18n } from '../i18n'
 import { Card, Row, SectionLabel } from './ui/primitives'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function ProfileDetail({ profile, metrics, onSetHeight }: Props) {
+  const { t } = useI18n()
   const [editing, setEditing] = useState(false)
   const [input, setInput] = useState('')
 
@@ -35,11 +37,13 @@ export function ProfileDetail({ profile, metrics, onSetHeight }: Props) {
         {height && <span className="ml-1 text-xl font-normal text-muted-foreground">cm</span>}
       </div>
 
-      <SectionLabel>基本信息</SectionLabel>
+      <SectionLabel>{t('detail.profile')}</SectionLabel>
       <Card>
         <Row>
-          <span>身高</span>
-          <span className="font-medium">{height ? `${height} cm` : '未设置'}</span>
+          <span>{t('profile.height')}</span>
+          <span className="font-medium">
+            {height ? `${height} cm` : t('common.notSet')}
+          </span>
         </Row>
         <Row>
           <span>BMI</span>
@@ -51,7 +55,7 @@ export function ProfileDetail({ profile, metrics, onSetHeight }: Props) {
                   className="rounded-md px-2 py-0.5 text-xs font-semibold text-white"
                   style={{ background: bmiCategory(bmi).color }}
                 >
-                  {bmiCategory(bmi).label}
+                  {t(bmiCategory(bmi).label)}
                 </span>
               </>
             ) : (
@@ -61,21 +65,23 @@ export function ProfileDetail({ profile, metrics, onSetHeight }: Props) {
         </Row>
         {!editing ? (
           <Row bordered={false} onClick={() => { setInput(height ? String(height) : ''); setEditing(true) }} onKeyDown={(e) => e.key === 'Enter' && (() => { setInput(height ? String(height) : ''); setEditing(true) })()} role="button" tabIndex={0}>
-            <span>修改身高</span>
+            <span>{t('profile.changeHeight')}</span>
             <span className="ml-0.5 text-xl font-light text-[#c7c7cc]">›</span>
           </Row>
         ) : (
           <div className="flex min-h-12 items-center gap-2 px-4 py-3.5">
             <Input
               type="number"
-              placeholder="身高 cm"
+              placeholder={t('profile.heightPlaceholder')}
               value={input}
               autoFocus
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             />
-            <Button onClick={handleSubmit}>保存</Button>
-            <Button variant="outline" onClick={() => setEditing(false)}>取消</Button>
+            <Button onClick={handleSubmit}>{t('common.save')}</Button>
+            <Button variant="outline" onClick={() => setEditing(false)}>
+              {t('common.cancel')}
+            </Button>
           </div>
         )}
       </Card>

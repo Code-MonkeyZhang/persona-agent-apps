@@ -3,13 +3,16 @@ import { Play } from 'lucide-react'
 import { Countdown } from './components/Countdown'
 import { ControlButtons } from './components/ControlButtons'
 import { HistoryView } from './components/HistoryView'
+import { LangToggle } from './components/LangToggle'
 import { RoundDisplay } from './components/RoundDisplay'
 import { TaskStatus } from './components/TaskStatus'
 import { TimeCircle } from './components/TimeCircle'
+import { useI18n } from './i18n'
 import { useTimerState } from './useTimerState'
 import { cn } from './lib/utils'
 
 export function Timer({ className }: { className?: string }) {
+  const { t } = useI18n()
   const {
     state,
     monthSessions,
@@ -68,7 +71,7 @@ export function Timer({ className }: { className?: string }) {
               : 'text-muted-foreground'
           )}
         >
-          专注
+          {t('tab.focus')}
         </button>
         <button
           onClick={() => setTab('history')}
@@ -79,8 +82,9 @@ export function Timer({ className }: { className?: string }) {
               : 'text-muted-foreground'
           )}
         >
-          历史
+          {t('tab.history')}
         </button>
+        <LangToggle className="shrink-0 px-2" />
       </div>
 
       {tab === 'history' ? (
@@ -107,7 +111,7 @@ export function Timer({ className }: { className?: string }) {
                   }
                   min={1}
                   max={90}
-                  label="工作"
+                  label={t('timeCircle.work')}
                   color="var(--primary)"
                 />
                 <TimeCircle
@@ -117,7 +121,7 @@ export function Timer({ className }: { className?: string }) {
                   }
                   min={1}
                   max={30}
-                  label="休息"
+                  label={t('timeCircle.break')}
                   color="var(--muted-foreground)"
                 />
               </div>
@@ -127,7 +131,7 @@ export function Timer({ className }: { className?: string }) {
                 value={intent}
                 onChange={(e) => setIntent(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleStart()}
-                placeholder="写一句话意图（可选）"
+                placeholder={t('timer.intentPlaceholder')}
                 className="glass rounded-xl px-4 py-3 text-[14px] outline-none placeholder:text-muted-foreground"
               />
 
@@ -136,7 +140,7 @@ export function Timer({ className }: { className?: string }) {
                 className="press flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-[14px] font-medium text-primary-foreground"
               >
                 <Play className="h-4 w-4" />
-                开始专注
+                {t('timer.start')}
               </button>
             </>
           ) : (

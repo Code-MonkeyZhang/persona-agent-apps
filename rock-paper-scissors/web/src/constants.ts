@@ -1,6 +1,7 @@
 import { HandFist, Hand, Scissors } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Move, RoundResult } from './types'
+import type { TKey } from './i18n/locales'
 
 /** 每种出招对应的 Lucide 图标。 */
 export const MOVE_ICON: Record<Move, LucideIcon> = {
@@ -9,14 +10,14 @@ export const MOVE_ICON: Record<Move, LucideIcon> = {
   scissors: Scissors,
 }
 
-export const RESULT_LABEL: Record<RoundResult, string> = {
-  user_win: '你赢',
-  agent_win: 'Agent赢',
-  draw: '平局',
+export const RESULT_LABEL: Record<RoundResult, TKey> = {
+  user_win: 'result.user_win',
+  agent_win: 'result.agent_win',
+  draw: 'result.draw',
 }
 
-export const MOVES: { move: Move; label: string }[] = [
-  { move: 'rock', label: '石头' },
-  { move: 'scissors', label: '剪刀' },
-  { move: 'paper', label: '布' },
+export const MOVES: { move: Move; label: TKey }[] = [
+  { move: 'rock', label: 'move.rock' },
+  { move: 'scissors', label: 'move.scissors' },
+  { move: 'paper', label: 'move.paper' },
 ]

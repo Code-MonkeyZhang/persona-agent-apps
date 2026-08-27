@@ -1,4 +1,5 @@
 import { Pause, Play, Square } from 'lucide-react'
+import { useI18n } from '../i18n'
 import { cn } from '../lib/utils'
 
 export function ControlButtons({
@@ -12,6 +13,7 @@ export function ControlButtons({
   onResume: () => void
   onStop: () => void
 }) {
+  const { t } = useI18n()
   return (
     <div className="flex justify-center gap-3">
       <button
@@ -24,14 +26,14 @@ export function ControlButtons({
         )}
       >
         {running ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-        {running ? '暂停' : '继续'}
+        {running ? t('control.pause') : t('control.resume')}
       </button>
       <button
         onClick={onStop}
         className="press flex items-center gap-2 rounded-xl border border-border bg-card px-6 py-3 text-[14px] font-medium text-muted-foreground pointer-fine:hover:text-destructive"
       >
         <Square className="h-4 w-4" />
-        停止
+        {t('control.stop')}
       </button>
     </div>
   )

@@ -4,12 +4,14 @@ import type { LucideIcon } from 'lucide-react'
 import { Dumbbell, Flame, Footprints } from 'lucide-react'
 import type { FitnessState, StrengthRecord, WorkoutEntry } from '../types'
 import {
-  formatDateCn,
+  categoryLabelKey,
+  formatDate,
   groupByCategory,
   latestPerExercise,
   previousStrength,
   workoutCaloriesByDate,
 } from '../helpers'
+import { useI18n } from '../i18n'
 import { pushVariants, fadeVariants, PAGE_TRANSITION } from '@/lib/transitions'
 import { Sparkline } from './Sparkline'
 import { StrengthDetail } from './StrengthDetail'
@@ -36,6 +38,7 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
 /** Fitness tab: workout diary (default) and ability records, with push/pop
  *  drill-in for day detail and exercise trends. */
 export function FitnessPage({ fitness }: Props) {
+  const { t } = useI18n()
   const [segment, setSegment] = useState<'diary' | 'ability'>('diary')
   const [detail, setDetail] = useState<FitnessDetail>({ kind: 'none' })
   const [dir, setDir] = useState(0)
@@ -101,8 +104,8 @@ export function FitnessPage({ fitness }: Props) {
             onValueChange={(v) => setSegment(v as 'diary' | 'ability')}
           >
             <TabsList className="mb-4 grid w-full grid-cols-2">
-              <TabsTrigger value="diary">训练记录</TabsTrigger>
-              <TabsTrigger value="ability">身体能力</TabsTrigger>
+              <TabsTrigger value="diary">{t('fitness.diary')}</TabsTrigger>
+              <TabsTrigger value="ability">{t('fitness.ability')}</TabsTrigger>
             </TabsList>
             <TabsContent value="diary">
               <DiaryView
@@ -133,6 +136,7 @@ function DiaryView({
   workouts: WorkoutEntry[]
   onSelectDate: (date: string) => void
 }) {
+  const { t, locale } = useI18n()
   const caloriesByDate = workoutCaloriesByDate(workouts)
 
   // Summary: distinct workout days + total calories in the current month.
@@ -149,7 +153,7 @@ function DiaryView({
   if (dates.length === 0) {
     return (
       <div className="px-5 py-10 text-center text-[15px] leading-relaxed text-muted-foreground">
-        还没有运动日记。跟 Agent 说"今天练了胸"试试。
+        {t('fitness.emptyDiary')}
       </div>
     )
   }
@@ -157,11 +161,11 @@ function DiaryView({
   return (
     <div>
       <SectionLabel>
-        本月已练 {monthDates.length} 天 · 消耗 {monthCalories} kcal
+        {t('fitness.monthSummary', { days: monthDates.length, cal: monthCalories })}
       </SectionLabel>
       <WorkoutCalendar caloriesByDate={caloriesByDate} onSelectDate={onSelectDate} />
 
-      <SectionLabel className="mt-2">最近训练</SectionLabel>
+      <SectionLabel className="mt-2">{t('fitness.recent')}</SectionLabel>
       <Card>
         {dates.map((date, i) => {
           const dayWorkouts = workouts.filter((w) => w.date === date)
@@ -173,7 +177,7 @@ function DiaryView({
               onClick={() => onSelectDate(date)}
             >
               <div className="flex flex-col">
-                <span>{formatDateCn(date)}</span>
+                <span>{formatDate(date, locale)}</span>
                 <span className="text-[12px] text-muted-foreground">{exerciseNames}</span>
               </div>
               <div className="flex items-center">
@@ -191,11 +195,13 @@ function DiaryView({
 }
 
 function CategoryLabel({ category }: { category: string }) {
+  const { t } = useI18n()
   const Icon = CATEGORY_ICONS[category]
+  const key = categoryLabelKey(category)
   return (
     <SectionLabel className="flex items-center gap-1">
       {Icon && <Icon className="size-3.5" />}
-      {category}
+      {key ? t(key) : category}
     </SectionLabel>
   )
 }
@@ -207,11 +213,12 @@ function AbilityList({
   records: StrengthRecord[]
   onSelect: (rec: StrengthRecord) => void
 }) {
+  const { t } = useI18n()
   const latest = latestPerExercise(records)
   if (latest.length === 0) {
     return (
       <div className="px-5 py-10 text-center text-[15px] leading-relaxed text-muted-foreground">
-        还没有能力记录。跟 Agent 说"深蹲能蹲 100"试试。
+        {t('fitness.emptyAbility')}
       </div>
     )
   }
@@ -252,8 +259,9 @@ function AbilityList({
                   </span>
                   {change !== null && change !== 0 && (
                     <span className="text-xs text-muted-foreground">
-                      比上次 {change > 0 ? '↑' : '↓'}
-                      {Math.abs(change)}
+                      {t('common.vsLast', {
+                        v: `${change > 0 ? '↑' : '↓'}${Math.abs(change)}`,
+                      })}
                     </span>
                   )}
                   <Sparkline data={series} color="#6366f1" />

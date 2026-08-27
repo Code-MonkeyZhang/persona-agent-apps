@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import type { Metric } from '../types'
+import { useI18n } from '../i18n'
 import { ChartCard } from './ui/primitives'
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function WeightChart({ metrics }: Props) {
+  const { t } = useI18n()
   const data = metrics
     .filter((m) => m.weight !== null)
     .map((m) => ({ date: m.date, weight: m.weight }))
@@ -38,7 +40,7 @@ export function WeightChart({ metrics }: Props) {
             stroke="#14b8a6"
             strokeWidth={2}
             dot={{ r: 4 }}
-            name="体重"
+            name={t('metric.weight')}
             unit="kg"
           />
         </LineChart>

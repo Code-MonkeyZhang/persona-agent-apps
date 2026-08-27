@@ -1,5 +1,6 @@
 import Calendar from 'react-calendar'
 import 'react-calendar/dist/Calendar.css'
+import { useI18n } from '../i18n'
 
 interface Props {
   caloriesByDate: Record<string, number>
@@ -16,9 +17,10 @@ function toDateStr(d: Date): string {
 /** Month-view calendar with green dots on workout days. Tapping a workout
  *  day pushes into its detail; rest days are inert. */
 export function WorkoutCalendar({ caloriesByDate, onSelectDate }: Props) {
+  const { locale } = useI18n()
   return (
     <Calendar
-      locale="zh-CN"
+      locale={locale}
       calendarType="iso8601"
       maxDate={new Date()}
       maxDetail="month"

@@ -1,6 +1,7 @@
 import NumberFlow from '@number-flow/react'
 import type { StrengthRecord } from '../types'
-import { daysBetween, formatDateCn } from '../helpers'
+import { daysBetween, formatDate } from '../helpers'
+import { useI18n } from '../i18n'
 import { DetailHeader } from './DetailHeader'
 import { TrendChart } from './TrendChart'
 import { Badge } from './ui/badge'
@@ -15,6 +16,7 @@ interface Props {
 
 /** Detail view for one exercise + metric: latest value, trend line, history. */
 export function StrengthDetail({ records, exercise, metric, onBack }: Props) {
+  const { t, locale } = useI18n()
   const same = records
     .filter((r) => r.exercise === exercise && r.metric === metric)
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -51,9 +53,10 @@ export function StrengthDetail({ records, exercise, metric, onBack }: Props) {
         {metric}
         {change !== null && change !== 0 && (
           <span>
-            {' · 比上次 '}
-            {change > 0 ? '↑' : '↓'}
-            {Math.abs(change)}
+            {' · '}
+            {t('common.vsLast', {
+              v: `${change > 0 ? '↑' : '↓'}${Math.abs(change)}`,
+            })}
           </span>
         )}
       </div>
@@ -63,7 +66,7 @@ export function StrengthDetail({ records, exercise, metric, onBack }: Props) {
         label={exercise}
         unit={unit}
       />
-      <SectionLabel>历史记录</SectionLabel>
+      <SectionLabel>{t('common.history')}</SectionLabel>
       <Card>
         {[...same].reverse().map((r, i) => {
           const isLatest = i === 0
@@ -71,9 +74,15 @@ export function StrengthDetail({ records, exercise, metric, onBack }: Props) {
           return (
             <Row key={`${r.date}-${i}`} bordered={i !== same.length - 1}>
               <div className="flex items-center gap-2">
-                <span className="text-[15px] text-muted-foreground">{formatDateCn(r.date)}</span>
-                {same.length >= 2 && isLatest && <Badge variant="success">新高</Badge>}
-                {same.length >= 2 && isEarliest && <Badge variant="info">起点</Badge>}
+                <span className="text-[15px] text-muted-foreground">
+                  {formatDate(r.date, locale)}
+                </span>
+                {same.length >= 2 && isLatest && (
+                  <Badge variant="success">{t('fitness.newHigh')}</Badge>
+                )}
+                {same.length >= 2 && isEarliest && (
+                  <Badge variant="info">{t('fitness.start')}</Badge>
+                )}
               </div>
               <span className="font-medium tabular-nums">
                 {r.value} {unit}
@@ -85,12 +94,15 @@ export function StrengthDetail({ records, exercise, metric, onBack }: Props) {
       {totalChange !== null && (
         <div className="mb-5 rounded-xl bg-card px-4 py-3 text-center">
           <span className="text-[15px] font-medium">
-            从开始到现在 {totalChange > 0 ? '↑' : '↓'}
-            {Math.abs(totalChange)} {unit}
+            {t('fitness.totalChange', {
+              arrow: totalChange > 0 ? '↑' : '↓',
+              v: Math.abs(totalChange),
+              unit,
+            })}
           </span>
           <span className="text-[13px] text-muted-foreground">
             {' · '}
-            {monthsSpan} 个月 · {same.length} 次记录
+            {t('fitness.recordsSpan', { months: monthsSpan, n: same.length })}
           </span>
         </div>
       )}

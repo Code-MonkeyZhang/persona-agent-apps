@@ -1,5 +1,6 @@
 import type { GameState, Move } from '../types'
 import { MOVES } from '../constants'
+import { useI18n } from '../i18n'
 import { MoveIcon } from './MoveIcon'
 import { cn } from '../lib/utils'
 
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function MoveButtons({ state, onMove }: Props) {
+  const { t } = useI18n()
   const enabled = !!state && !state.gameOver && !state.waitingForAgent
   return (
     <div className="flex justify-center gap-3">
@@ -23,7 +25,7 @@ export function MoveButtons({ state, onMove }: Props) {
           )}
         >
           <MoveIcon move={m.move} className="h-7 w-7 text-foreground" />
-          <span className="text-muted-foreground">{m.label}</span>
+          <span className="text-muted-foreground">{t(m.label)}</span>
         </button>
       ))}
     </div>

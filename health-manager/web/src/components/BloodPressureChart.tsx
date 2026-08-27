@@ -9,6 +9,7 @@ import {
   Legend,
 } from 'recharts'
 import type { Metric } from '../types'
+import { useI18n } from '../i18n'
 import { ChartCard } from './ui/primitives'
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function BloodPressureChart({ metrics }: Props) {
+  const { t } = useI18n()
   const data = metrics
     .filter((m) => m.systolic !== null)
     .map((m) => ({
@@ -44,7 +46,7 @@ export function BloodPressureChart({ metrics }: Props) {
             stroke="#ef4444"
             strokeWidth={2}
             dot={{ r: 3 }}
-            name="收缩压"
+            name={t('metric.systolic')}
             unit="mmHg"
           />
           <Line
@@ -53,7 +55,7 @@ export function BloodPressureChart({ metrics }: Props) {
             stroke="#f59e0b"
             strokeWidth={2}
             dot={{ r: 3 }}
-            name="舒张压"
+            name={t('metric.diastolic')}
             unit="mmHg"
           />
         </ComposedChart>

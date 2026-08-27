@@ -1,4 +1,6 @@
 import type { DietEntry, Metric, StrengthRecord, WorkoutEntry } from './types'
+import type { TFunc } from './i18n'
+import type { TKey } from './i18n/locales'
 
 /** Find the latest and previous records that have a non-null value for a field. */
 export function latestAndPrev(
@@ -22,16 +24,16 @@ export function calcBMI(
 
 export function bmiCategory(
   bmi: number
-): { label: string; color: string } {
-  if (bmi < 18.5) return { label: '偏瘦', color: '#3b82f6' }
-  if (bmi < 24) return { label: '正常', color: '#22c55e' }
-  if (bmi < 28) return { label: '偏胖', color: '#f59e0b' }
-  return { label: '肥胖', color: '#ef4444' }
+): { label: TKey; color: string } {
+  if (bmi < 18.5) return { label: 'bmi.underweight', color: '#3b82f6' }
+  if (bmi < 24) return { label: 'bmi.normal', color: '#22c55e' }
+  if (bmi < 28) return { label: 'bmi.overweight', color: '#f59e0b' }
+  return { label: 'bmi.obese', color: '#ef4444' }
 }
 
 /** Format a numeric change as a human-readable arrow string. */
-export function fmtChange(change: number | null): string {
-  if (change === null || change === 0) return '持平'
+export function fmtChange(change: number | null, t: TFunc): string {
+  if (change === null || change === 0) return t('change.flat')
   if (change > 0) return `↑${Math.abs(change)}`
   return `↓${Math.abs(change)}`
 }
@@ -51,12 +53,14 @@ export function daysBetween(a: string, b: string): number {
   return Math.round((Date.parse(b) - Date.parse(a)) / 86400000)
 }
 
-const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-
-/** Format a YYYY-MM-DD date as "6月25日 周三". */
-export function formatDateCn(date: string): string {
+/** Format a YYYY-MM-DD date as a localized "Jun 25 Wed" style label. */
+export function formatDate(date: string, locale: string): string {
   const d = new Date(date + 'T00:00:00')
-  return `${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]}`
+  return new Intl.DateTimeFormat(locale, {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(d)
 }
 
 // --- Diet aggregation -------------------------------------------------------
@@ -130,6 +134,25 @@ export function latestPerExercise(records: StrengthRecord[]): StrengthRecord[] {
 }
 
 const _CATEGORY_ORDER = ['有氧', '上半身', '下半身']
+
+/**
+ * DB 里存的 category 是中文数据值（如 "有氧"），显示层通过本函数映射成
+ * i18n key；未知类别返回 null，调用方回退显示原始值。
+ */
+export function categoryLabelKey(category: string): TKey | null {
+  switch (category) {
+    case '有氧':
+      return 'fitness.cat.cardio'
+    case '上半身':
+      return 'fitness.cat.upper'
+    case '下半身':
+      return 'fitness.cat.lower'
+    case '其他':
+      return 'common.other'
+    default:
+      return null
+  }
+}
 
 /** Group records by category, sorted by a fixed preference then by name.
  *  Null/empty categories fall under "其他". */

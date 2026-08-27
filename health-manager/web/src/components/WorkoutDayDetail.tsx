@@ -1,6 +1,7 @@
 import NumberFlow from '@number-flow/react'
 import type { WorkoutEntry } from '../types'
-import { formatDateCn } from '../helpers'
+import { formatDate } from '../helpers'
+import { useI18n } from '../i18n'
 import { DetailHeader } from './DetailHeader'
 import { Card, Row, SectionLabel } from './ui/primitives'
 
@@ -12,15 +13,16 @@ interface Props {
 
 /** Push view: total calories + exercise breakdown for one workout day. */
 export function WorkoutDayDetail({ date, workouts, onBack }: Props) {
+  const { t, locale } = useI18n()
   const dayWorkouts = workouts.filter((w) => w.date === date)
   const totalCalories = dayWorkouts.reduce((s, w) => s + (w.calories ?? 0), 0)
 
   return (
     <div>
-      <DetailHeader title={formatDateCn(date)} onBack={onBack} />
+      <DetailHeader title={formatDate(date, locale)} onBack={onBack} />
       {dayWorkouts.length === 0 ? (
         <div className="px-5 py-10 text-center text-[15px] leading-relaxed text-muted-foreground">
-          这天没有训练记录。
+          {t('fitness.dayEmpty')}
         </div>
       ) : (
         <>
@@ -29,10 +31,10 @@ export function WorkoutDayDetail({ date, workouts, onBack }: Props) {
             <span className="ml-1 text-xl font-normal text-muted-foreground">kcal</span>
           </div>
           <div className="px-1 pb-4 text-[15px] text-muted-foreground">
-            总消耗 · {dayWorkouts.length} 个动作
+            {t('fitness.totalBurn', { n: dayWorkouts.length })}
           </div>
 
-          <SectionLabel>训练明细</SectionLabel>
+          <SectionLabel>{t('fitness.detail')}</SectionLabel>
           <Card>
             {dayWorkouts.map((w, i) => (
               <Row key={w.id} bordered={i !== dayWorkouts.length - 1}>

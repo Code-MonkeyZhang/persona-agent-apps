@@ -2,6 +2,7 @@ import NumberFlow from '@number-flow/react'
 import { PolarAngleAxis, RadialBar, RadialBarChart } from 'recharts'
 import type { MacroGoals } from '../types'
 import { MACROS } from '../macroMeta'
+import { useI18n } from '../i18n'
 import { Progress } from './ui/progress'
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
  * caller and shown against the resolved goals.
  */
 export function NutritionSummary({ calories, goal, macros, macroGoals }: Props) {
+  const { t } = useI18n()
   const pct = goal ? Math.min((calories / goal) * 100, 100) : 0
   const over = goal !== null && calories > goal
   const ringColor = over ? '#ef4444' : '#14b8a6'
@@ -51,7 +53,7 @@ export function NutritionSummary({ calories, goal, macros, macroGoals }: Props) 
           </div>
         </div>
         <span className="mt-1 text-[11px] text-muted-foreground">
-          {goal !== null ? `/ ${goal}` : '未设目标'}
+          {goal !== null ? `/ ${goal}` : t('diet.noGoal')}
         </span>
       </div>
 
@@ -68,7 +70,7 @@ export function NutritionSummary({ calories, goal, macros, macroGoals }: Props) 
                     className="inline-block size-1.5 rounded-full"
                     style={{ background: color }}
                   />
-                  {label}
+                  {t(label)}
                 </span>
                 <span className="tabular-nums font-medium">
                   {value}

@@ -4,6 +4,7 @@ import { Loader2, RotateCcw } from 'lucide-react'
 import type { ReactNode } from 'react'
 import type { GameState } from '../types'
 import { RESULT_LABEL } from '../constants'
+import { useI18n } from '../i18n'
 import { MoveIcon } from './MoveIcon'
 import { cn } from '../lib/utils'
 
@@ -37,7 +38,8 @@ const PHASE_TRANSITION: Transition = { duration: 0.22, ease: EASE_OUT }
  */
 export function ResultArea({ state, onRematch, onStartGame }: Props) {
   const reduce = useReducedMotion()
-  const phase = renderPhase(state, onRematch, onStartGame)
+  const { t } = useI18n()
+  const phase = renderPhase(state, onRematch, onStartGame, t)
 
   return (
     <div className="flex min-h-[180px] flex-1 items-center justify-center rounded-2xl bg-card p-6 shadow-sm">
@@ -57,10 +59,13 @@ export function ResultArea({ state, onRematch, onStartGame }: Props) {
   )
 }
 
+type TFunc = ReturnType<typeof useI18n>['t']
+
 function renderPhase(
   state: GameState | null,
   onRematch: () => void,
-  onStartGame: () => void
+  onStartGame: () => void,
+  t: TFunc
 ): { key: string; body: ReactNode } {
   // 无游戏
   if (!state) {
@@ -69,7 +74,7 @@ function renderPhase(
       body: (
         <button className={PRIMARY_BTN} onClick={onStartGame}>
           <MoveIcon move="rock" className="h-4 w-4" />
-          开始游戏
+          {t('resultArea.start')}
         </button>
       ),
     }
@@ -84,14 +89,14 @@ function renderPhase(
         body: (
           <>
             <div className="text-xl font-semibold text-muted-foreground">
-              本局已结束
+              {t('resultArea.matchEnded')}
             </div>
             <div className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
               {state.userScore} - {state.agentScore}
             </div>
             <button className={PRIMARY_BTN} onClick={onRematch}>
               <RotateCcw className="h-4 w-4" />
-              再来一局
+              {t('resultArea.rematch')}
             </button>
           </>
         ),
@@ -108,14 +113,16 @@ function renderPhase(
               userWin ? 'text-primary' : 'text-destructive'
             )}
           >
-            {userWin ? '你赢了整场！' : 'Agent 赢了整场！'}
+            {userWin
+              ? t('resultArea.userWinsMatch')
+              : t('resultArea.agentWinsMatch')}
           </div>
           <div className="text-3xl font-bold tabular-nums tracking-tight text-foreground">
             {state.userScore} - {state.agentScore}
           </div>
           <button className={PRIMARY_BTN} onClick={onRematch}>
             <RotateCcw className="h-4 w-4" />
-            再来一局
+            {t('resultArea.rematch')}
           </button>
         </>
       ),
@@ -134,7 +141,7 @@ function renderPhase(
           />
           <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Agent 思考中...
+            {t('resultArea.agentThinking')}
           </span>
         </>
       ),
@@ -161,8 +168,8 @@ function renderPhase(
           <span
             className={cn('text-sm font-medium', RESULT_TONE[state.lastResult])}
           >
-            {RESULT_LABEL[state.lastResult]}
-            {state.lastResult === 'draw' ? '（重出）' : ''}
+            {t(RESULT_LABEL[state.lastResult])}
+            {state.lastResult === 'draw' ? t('result.drawReplay') : ''}
           </span>
         </>
       ),
@@ -172,6 +179,10 @@ function renderPhase(
   // 等用户出招（新比赛 / 新一局）
   return {
     key: 'awaiting',
-    body: <span className="text-sm text-muted-foreground">出招吧！</span>,
+    body: (
+      <span className="text-sm text-muted-foreground">
+        {t('resultArea.yourMove')}
+      </span>
+    ),
   }
 }

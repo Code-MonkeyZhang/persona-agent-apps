@@ -5,6 +5,7 @@ import { WeightChart } from './WeightChart'
 import { BloodPressureChart } from './BloodPressureChart'
 import { HistoryList } from './HistoryList'
 import { latestAndPrev, fmtChange } from '../helpers'
+import { useI18n } from '../i18n'
 
 function MetricHero({
   value,
@@ -17,7 +18,11 @@ function MetricHero({
   change: number | null
   extra?: string
 }) {
-  const sub = [change !== null && change !== 0 ? fmtChange(change) : null, extra]
+  const { t } = useI18n()
+  const sub = [
+    change !== null && change !== 0 ? fmtChange(change, t) : null,
+    extra,
+  ]
     .filter(Boolean)
     .join(' · ')
   return (
@@ -59,9 +64,12 @@ export function WeightDetail({ metrics }: DetailProps) {
 }
 
 export function BloodPressureDetail({ metrics }: DetailProps) {
+  const { t } = useI18n()
   const { latest, prev } = latestAndPrev(metrics, 'systolic')
   const change = latest && prev ? latest.systolic! - prev.systolic! : null
-  const heartRate = latest?.heartRate ? `心率 ${latest.heartRate}` : undefined
+  const heartRate = latest?.heartRate
+    ? t('metric.heartRate', { n: latest.heartRate })
+    : undefined
   return (
     <>
       <MetricHero

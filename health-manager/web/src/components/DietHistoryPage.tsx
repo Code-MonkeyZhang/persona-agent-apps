@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import type { DietState } from '../types'
 import type { DietEntry } from '../types'
-import { caloriesByDate, dayTotals, formatDateCn } from '../helpers'
+import { caloriesByDate, dayTotals, formatDate } from '../helpers'
 import { MACROS } from '../macroMeta'
+import { useI18n } from '../i18n'
 import { DetailHeader } from './DetailHeader'
 import { MealList } from './MealList'
 import { Card, Row, SectionLabel } from './ui/primitives'
@@ -19,6 +20,7 @@ interface Props {
  * the only one. Tapping a day expands its meals and macro totals inline.
  */
 export function DietHistoryPage({ diet, onBack }: Props) {
+  const { t, locale } = useI18n()
   const [open, setOpen] = useState<string | null>(null)
 
   const totals = caloriesByDate(diet.entries)
@@ -37,12 +39,12 @@ export function DietHistoryPage({ diet, onBack }: Props) {
 
   return (
     <div>
-      <DetailHeader title="饮食历史" onBack={onBack} />
+      <DetailHeader title={t('diet.historyTitle')} onBack={onBack} />
 
-      <SectionLabel>每日记录 · 日均 {avg} kcal</SectionLabel>
+      <SectionLabel>{t('diet.dailyLog', { avg })}</SectionLabel>
       {dates.length === 0 ? (
         <div className="px-5 py-10 text-center text-[15px] leading-relaxed text-muted-foreground">
-          还没有饮食记录。
+          {t('diet.emptyHistory')}
         </div>
       ) : (
         dates.map((date) => {
@@ -53,7 +55,7 @@ export function DietHistoryPage({ diet, onBack }: Props) {
             <Card key={date} className="mb-3">
               <Row bordered={false} onClick={() => setOpen(expanded ? null : date)}>
                 <div className="flex flex-col">
-                  <span>{formatDateCn(date)}</span>
+                  <span>{formatDate(date, locale)}</span>
                   <span className="flex flex-wrap items-center gap-x-2 text-[12px] text-muted-foreground">
                     {MACROS.map(({ key, label, color }) => (
                       <span key={key} className="flex items-center gap-1">
@@ -61,7 +63,7 @@ export function DietHistoryPage({ diet, onBack }: Props) {
                           className="inline-block size-1.5 rounded-full"
                           style={{ background: color }}
                         />
-                        {label} {dayMacro[key]}g
+                        {t(label)} {dayMacro[key]}g
                       </span>
                     ))}
                   </span>

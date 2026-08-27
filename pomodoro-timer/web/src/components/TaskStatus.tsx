@@ -1,16 +1,20 @@
 import type { TimerState } from '../types'
+import { useI18n } from '../i18n'
 
 export function TaskStatus({ state }: { state: TimerState }) {
+  const { t } = useI18n()
   let text: string | null = null
 
   if (state.phase === 'idle') {
     text = null
   } else if (!state.running) {
-    text = '已暂停'
+    text = t('status.paused')
   } else if (state.phase === 'focus') {
-    text = state.intent ? `在${state.intent}中` : '专注中'
+    text = state.intent
+      ? t('status.intent', { intent: state.intent })
+      : t('status.focusing')
   } else {
-    text = '休息中'
+    text = t('status.resting')
   }
 
   if (!text) return null

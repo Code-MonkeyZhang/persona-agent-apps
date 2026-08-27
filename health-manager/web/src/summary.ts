@@ -1,4 +1,6 @@
 import type { BasicsState, DietState, FitnessState } from './types'
+import type { TFunc } from './i18n'
+import type { TKey } from './i18n/locales'
 import {
   calcBMI,
   caloriesByDate,
@@ -33,7 +35,7 @@ export interface SummaryCard {
   value: string
   unit?: string
   sub?: string
-  tag?: string
+  tag?: TKey
   tagTone?: TagTone
   series?: number[]
   go: CardGo
@@ -60,35 +62,43 @@ const DIA_HIGH = 90
 export function buildSummary(
   basics: BasicsState,
   diet: DietState,
-  fitness: FitnessState
+  fitness: FitnessState,
+  t: TFunc
 ): Summary {
   const today = todayStr()
   const cards: SummaryCard[] = []
 
-  const weightCard = buildWeightCard(basics, today)
+  const weightCard = buildWeightCard(basics, today, t)
   if (weightCard) cards.push(weightCard)
 
-  const bpCard = buildBloodPressureCard(basics, today)
+  const bpCard = buildBloodPressureCard(basics, today, t)
   if (bpCard) cards.push(bpCard)
 
   const bmiCard = buildBmiCard(basics)
   if (bmiCard) cards.push(bmiCard)
 
-  const calorieCard = buildCalorieCard(diet, today)
+  const calorieCard = buildCalorieCard(diet, today, t)
   if (calorieCard) cards.push(calorieCard)
 
-  cards.push(...buildStrengthCards(fitness, today))
+  cards.push(...buildStrengthCards(fitness, today, t))
 
   cards.sort((a, b) => b.tier - a.tier || a.recencyDays - b.recencyDays)
 
-  return { status: buildStatus(cards, basics), cards: cards.slice(0, MAX_CARDS) }
+  return {
+    status: buildStatus(cards, basics, t),
+    cards: cards.slice(0, MAX_CARDS),
+  }
 }
 
 function daysAgo(date: string, today: string): number {
   return Math.max(daysBetween(date, today), 0)
 }
 
-function buildWeightCard(basics: BasicsState, today: string): SummaryCard | null {
+function buildWeightCard(
+  basics: BasicsState,
+  today: string,
+  t: TFunc
+): SummaryCard | null {
   const { latest, prev } = latestAndPrev(basics.metrics, 'weight')
   if (!latest || latest.weight === null) return null
 
@@ -98,21 +108,21 @@ function buildWeightCard(basics: BasicsState, today: string): SummaryCard | null
     .map((m) => m.weight as number)
 
   let tier = TIER_CORE
-  let tag: string | undefined
+  let tag: TKey | undefined
   let sub: string | undefined
   if (prev && prev.weight !== null) {
     const change = Math.round((latest.weight - prev.weight) * 10) / 10
-    sub = `比上次 ${change > 0 ? '+' : ''}${change}kg`
+    sub = t('common.vsLast', { v: `${change > 0 ? '+' : ''}${change}kg` })
     if (Math.abs(change) > WEIGHT_CHANGE_THRESHOLD) {
       tier = TIER_CHANGE
-      tag = '变化较大'
+      tag = 'summary.tag.change'
     }
   }
   if (tier === TIER_CORE && daysAgo(latest.date, today) <= 1) tier = TIER_RECENT
 
   return {
     key: 'weight',
-    label: '体重',
+    label: t('metric.weight'),
     value: String(latest.weight),
     unit: 'kg',
     sub,
@@ -125,24 +135,28 @@ function buildWeightCard(basics: BasicsState, today: string): SummaryCard | null
   }
 }
 
-function buildBloodPressureCard(basics: BasicsState, today: string): SummaryCard | null {
+function buildBloodPressureCard(
+  basics: BasicsState,
+  today: string,
+  t: TFunc
+): SummaryCard | null {
   const { latest, prev } = latestAndPrev(basics.metrics, 'systolic')
   if (!latest || latest.systolic === null) return null
 
   let tier = TIER_CORE
-  let tag: string | undefined
+  let tag: TKey | undefined
   let tagTone: TagTone | undefined
   let sub: string | undefined
   if (latest.systolic >= SYS_HIGH || (latest.diastolic ?? 0) >= DIA_HIGH) {
     tier = TIER_ATTENTION
-    tag = '需关注'
+    tag = 'summary.tag.attention'
     tagTone = 'warn'
   } else if (prev && prev.systolic !== null) {
     const change = latest.systolic - prev.systolic
-    sub = `比上次 ${change > 0 ? '+' : ''}${change}`
+    sub = t('common.vsLast', { v: `${change > 0 ? '+' : ''}${change}` })
     if (Math.abs(change) > BP_CHANGE_THRESHOLD) {
       tier = TIER_CHANGE
-      tag = '变化较大'
+      tag = 'summary.tag.change'
       tagTone = 'notice'
     }
   }
@@ -150,7 +164,7 @@ function buildBloodPressureCard(basics: BasicsState, today: string): SummaryCard
 
   return {
     key: 'blood_pressure',
-    label: '血压',
+    label: t('metric.bloodPressure'),
     value: `${latest.systolic}/${latest.diastolic}`,
     unit: 'mmHg',
     sub,
@@ -177,7 +191,11 @@ function buildBmiCard(basics: BasicsState): SummaryCard | null {
   }
 }
 
-function buildCalorieCard(diet: DietState, today: string): SummaryCard | null {
+function buildCalorieCard(
+  diet: DietState,
+  today: string,
+  t: TFunc
+): SummaryCard | null {
   if (diet.entries.length === 0) return null
   const todayTotal = caloriesByDate(diet.entries)[today] ?? 0
   if (todayTotal === 0) return null
@@ -185,14 +203,14 @@ function buildCalorieCard(diet: DietState, today: string): SummaryCard | null {
   let sub: string | undefined
   if (diet.goal) {
     const pct = Math.round((todayTotal / diet.goal) * 100)
-    sub = `目标 ${diet.goal} 卡 · ${pct}%`
+    sub = t('summary.goalPct', { goal: diet.goal, pct })
   }
 
   return {
     key: 'calories',
-    label: '今日卡路里',
+    label: t('summary.label.todayCalories'),
     value: String(todayTotal),
-    unit: '卡',
+    unit: t('summary.unit.cal'),
     sub,
     go: 'diet',
     tier: TIER_RECENT,
@@ -200,23 +218,27 @@ function buildCalorieCard(diet: DietState, today: string): SummaryCard | null {
   }
 }
 
-function buildStrengthCards(fitness: FitnessState, today: string): SummaryCard[] {
+function buildStrengthCards(
+  fitness: FitnessState,
+  today: string,
+  t: TFunc
+): SummaryCard[] {
   const cards: SummaryCard[] = []
   for (const rec of latestPerExercise(fitness.strengthRecords)) {
     const prev = previousStrength(fitness.strengthRecords, rec.exercise, rec.metric)
     const recency = daysAgo(rec.date, today)
 
     let tier = TIER_CORE
-    let tag: string | undefined
+    let tag: TKey | undefined
     let sub: string | undefined
     if (prev) {
       const change = Math.round((rec.value - prev.value) * 10) / 10
       if (change > 0) {
         tier = TIER_CHANGE
-        tag = '进步'
-        sub = `比上次 +${change}`
+        tag = 'summary.tag.progress'
+        sub = t('common.vsLast', { v: `+${change}` })
       } else if (change !== 0) {
-        sub = `比上次 ${change}`
+        sub = t('common.vsLast', { v: String(change) })
       }
     }
     if (tier === TIER_CORE && recency <= 2) tier = TIER_RECENT
@@ -226,7 +248,7 @@ function buildStrengthCards(fitness: FitnessState, today: string): SummaryCard[]
       key: `strength:${rec.exercise}:${rec.metric}`,
       label: rec.exercise,
       value: String(rec.value),
-      unit: rec.unit ?? (rec.metric === 'max_weight' ? 'kg' : '次'),
+      unit: rec.unit ?? (rec.metric === 'max_weight' ? 'kg' : t('summary.unit.times')),
       sub,
       tag,
       tagTone: tier === TIER_CHANGE ? 'notice' : undefined,
@@ -238,22 +260,28 @@ function buildStrengthCards(fitness: FitnessState, today: string): SummaryCard[]
   return cards
 }
 
-function buildStatus(cards: SummaryCard[], basics: BasicsState): string {
+function buildStatus(cards: SummaryCard[], basics: BasicsState, t: TFunc): string {
   const top = cards[0]
-  if (!top) return '开始记录，看今天的你'
-  if (top.tier === TIER_ATTENTION) return '今天血压偏高，留意一下'
+  if (!top) return t('summary.status.start')
+  if (top.tier === TIER_ATTENTION) return t('summary.status.bpHigh')
 
-  const pr = cards.find((c) => c.tag === '进步')
-  if (pr) return `${pr.label}创新高 ${pr.value}${pr.unit ?? ''}`
+  const pr = cards.find((c) => c.tag === 'summary.tag.progress')
+  if (pr)
+    return t('summary.status.newHigh', {
+      label: pr.label,
+      value: pr.value,
+      unit: pr.unit ?? '',
+    })
 
   const bigWeight = cards.find((c) => c.key === 'weight' && c.tier === TIER_CHANGE)
   if (bigWeight) {
     const { latest, prev } = latestAndPrev(basics.metrics, 'weight')
     if (latest && prev && latest.weight !== null && prev.weight !== null) {
       const change = Math.round((latest.weight - prev.weight) * 10) / 10
-      const dir = change > 0 ? '重' : '轻'
-      return `体重比上次${dir}了 ${Math.abs(change)}kg`
+      return change > 0
+        ? t('summary.status.weightHeavier', { v: Math.abs(change) })
+        : t('summary.status.weightLighter', { v: Math.abs(change) })
     }
   }
-  return '今天数据平稳'
+  return t('summary.status.stable')
 }

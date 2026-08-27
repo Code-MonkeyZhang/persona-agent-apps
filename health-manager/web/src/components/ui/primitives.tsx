@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '../../i18n'
 
 /** iOS grouped-table section header. */
 export function SectionLabel({
@@ -69,7 +70,7 @@ export function Chevron({ className }: { className?: string }) {
  * optional action, a fixed-height canvas, and an optional footer row.
  */
 export function ChartCard({
-  title = '趋势',
+  title,
   action,
   footer,
   children,
@@ -79,10 +80,11 @@ export function ChartCard({
   footer?: React.ReactNode
   children: React.ReactNode
 }) {
+  const { t } = useI18n()
   return (
     <div className="mb-5 rounded-xl bg-card px-4 pb-3 pt-3.5">
       <div className="flex items-center justify-between pb-1.5">
-        <SectionLabel className="px-0 pb-0">{title}</SectionLabel>
+        <SectionLabel className="px-0 pb-0">{title ?? t('common.trend')}</SectionLabel>
         {action}
       </div>
       <div className="h-[200px] w-full mobile:h-[180px]">{children}</div>

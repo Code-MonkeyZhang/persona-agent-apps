@@ -1,10 +1,11 @@
 import type { Phase, TimerState } from './types'
+import type { TKey } from './i18n/locales'
 
-export const PHASE_LABELS: Record<Phase, string> = {
-  idle: '空闲',
-  focus: '专注',
-  short_break: '短休息',
-  long_break: '长休息',
+export const PHASE_LABELS: Record<Phase, TKey> = {
+  idle: 'phase.idle',
+  focus: 'phase.focus',
+  short_break: 'phase.short_break',
+  long_break: 'phase.long_break',
 }
 
 /** Compute the total duration in seconds for the current phase. */

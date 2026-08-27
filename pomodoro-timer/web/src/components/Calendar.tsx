@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { FocusSession } from '../types'
+import { useI18n } from '../i18n'
 import { cn } from '../lib/utils'
 
-const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 const RING_R = 15
 
 export function Calendar({
@@ -17,9 +17,25 @@ export function Calendar({
   onSelectDate: (date: Date) => void
   onMonthChange: (year: number, month: number) => void
 }) {
+  const { locale } = useI18n()
   const today = new Date()
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
+
+  const weekdays = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(locale, { weekday: 'narrow' })
+    // 2023-01-02 是周一，用它取一整周的首字母（周一开头）
+    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2023, 0, 2 + i)))
+  }, [locale])
+
+  const monthTitle = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        year: 'numeric',
+        month: 'long',
+      }).format(new Date(viewYear, viewMonth, 1)),
+    [locale, viewYear, viewMonth]
+  )
 
   const sessionsByDay = useMemo(() => {
     const map = new Map<string, FocusSession[]>()
@@ -64,9 +80,7 @@ export function Calendar({
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <span className="text-[15px] font-semibold">
-          {viewYear}年{viewMonth + 1}月
-        </span>
+        <span className="text-[15px] font-semibold">{monthTitle}</span>
         <button
           onClick={() => shiftMonth(1)}
           className="press text-muted-foreground pointer-fine:hover:text-foreground"
@@ -76,9 +90,9 @@ export function Calendar({
       </div>
 
       <div className="grid grid-cols-7">
-        {WEEKDAYS.map((w) => (
+        {weekdays.map((w, i) => (
           <div
-            key={w}
+            key={i}
             className="py-1 text-center text-[11px] text-muted-foreground"
           >
             {w}
