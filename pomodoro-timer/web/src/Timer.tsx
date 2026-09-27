@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Play } from 'lucide-react'
 import { Countdown } from './components/Countdown'
 import { ControlButtons } from './components/ControlButtons'
 import { HistoryView } from './components/HistoryView'
 import { LangToggle } from './components/LangToggle'
 import { RoundDisplay } from './components/RoundDisplay'
+import { SessionForm } from './components/SessionForm'
 import { TaskStatus } from './components/TaskStatus'
-import { TimeCircle } from './components/TimeCircle'
 import { useI18n } from './i18n'
 import { useTimerState } from './useTimerState'
 import { cn } from './lib/utils'
@@ -21,11 +20,9 @@ export function Timer({ className }: { className?: string }) {
     sendPause,
     sendResume,
     sendStop,
-    sendUpdateSettings,
     sendGetMonth,
   } = useTimerState()
   const [tab, setTab] = useState<'focus' | 'history'>('focus')
-  const [intent, setIntent] = useState('')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
   useEffect(() => {
@@ -38,21 +35,6 @@ export function Timer({ className }: { className?: string }) {
   if (!state) return null
 
   const isIdle = state.phase === 'idle'
-
-  const handleStart = () => {
-    sendStart(intent.trim())
-    setIntent('')
-  }
-
-  const handleAdjustRounds = (delta: number) => {
-    sendUpdateSettings({
-      ...state.settings,
-      focus_per_round: Math.max(
-        1,
-        Math.min(8, state.settings.focus_per_round + delta)
-      ),
-    })
-  }
 
   return (
     <div
@@ -94,67 +76,19 @@ export function Timer({ className }: { className?: string }) {
           onSelectDate={setSelectedDate}
           onMonthChange={sendGetMonth}
         />
+      ) : isIdle ? (
+        <SessionForm initialConfig={state.config} onStart={sendStart} />
       ) : (
         <>
-          <RoundDisplay
-            state={state}
-            onAdjustRounds={isIdle ? handleAdjustRounds : undefined}
+          <RoundDisplay state={state} />
+          <Countdown state={state} remainingSeconds={remainingSeconds} />
+          <TaskStatus state={state} />
+          <ControlButtons
+            running={state.running}
+            onPause={sendPause}
+            onResume={sendResume}
+            onStop={sendStop}
           />
-
-          {isIdle ? (
-            <>
-              <div className="flex justify-center gap-8 py-2">
-                <TimeCircle
-                  value={state.settings.focus_min}
-                  onChange={(v) =>
-                    sendUpdateSettings({ ...state.settings, focus_min: v })
-                  }
-                  min={1}
-                  max={90}
-                  label={t('timeCircle.work')}
-                  color="var(--primary)"
-                />
-                <TimeCircle
-                  value={state.settings.break_min}
-                  onChange={(v) =>
-                    sendUpdateSettings({ ...state.settings, break_min: v })
-                  }
-                  min={1}
-                  max={30}
-                  label={t('timeCircle.break')}
-                  color="var(--muted-foreground)"
-                />
-              </div>
-
-              <input
-                type="text"
-                value={intent}
-                onChange={(e) => setIntent(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleStart()}
-                placeholder={t('timer.intentPlaceholder')}
-                className="glass rounded-xl px-4 py-3 text-[14px] outline-none placeholder:text-muted-foreground"
-              />
-
-              <button
-                onClick={handleStart}
-                className="press flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-[14px] font-medium text-primary-foreground"
-              >
-                <Play className="h-4 w-4" />
-                {t('timer.start')}
-              </button>
-            </>
-          ) : (
-            <>
-              <Countdown state={state} remainingSeconds={remainingSeconds} />
-              <TaskStatus state={state} />
-              <ControlButtons
-                running={state.running}
-                onPause={sendPause}
-                onResume={sendResume}
-                onStop={sendStop}
-              />
-            </>
-          )}
         </>
       )}
     </div>

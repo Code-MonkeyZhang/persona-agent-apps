@@ -74,6 +74,11 @@ export function DayDetail({
                 </span>
               </div>
               <div className="flex shrink-0 items-center gap-2">
+                {s.round_total > 1 && (
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground tabular-nums">
+                    {s.round_index}/{s.round_total}
+                  </span>
+                )}
                 <span className="tabular-nums text-muted-foreground">
                   {formatDuration(s.duration_sec, t)}
                 </span>

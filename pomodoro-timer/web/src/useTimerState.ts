@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { FocusSession, Stats, TimerSettings, TimerState } from './types'
+import type { FocusSession, SessionConfig, Stats, TimerState } from './types'
 
 export function useTimerState() {
   const [state, setState] = useState<TimerState | null>(null)
@@ -69,17 +69,15 @@ export function useTimerState() {
     wsRef.current?.send(JSON.stringify(msg))
   }, [])
 
+  /** Start a full session; the three config numbers are always required. */
   const sendStart = useCallback(
-    (intent: string, durationMin?: number) => send({ type: 'start', intent, duration_min: durationMin }),
+    (intent: string, config: SessionConfig) =>
+      send({ type: 'start', intent, ...config }),
     [send]
   )
   const sendPause = useCallback(() => send({ type: 'pause' }), [send])
   const sendResume = useCallback(() => send({ type: 'resume' }), [send])
   const sendStop = useCallback(() => send({ type: 'stop' }), [send])
-  const sendUpdateSettings = useCallback(
-    (settings: TimerSettings) => send({ type: 'update_settings', settings }),
-    [send]
-  )
   const sendGetMonth = useCallback(
     (year: number, month: number) => send({ type: 'get_month', year, month }),
     [send]
@@ -95,7 +93,6 @@ export function useTimerState() {
     sendPause,
     sendResume,
     sendStop,
-    sendUpdateSettings,
     sendGetMonth,
   }
 }

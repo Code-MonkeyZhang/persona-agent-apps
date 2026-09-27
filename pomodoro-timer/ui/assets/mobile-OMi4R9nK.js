@@ -1,1 +1,0 @@
-import{j as e,I as r,T as o,c as t}from"./index-DNLn2w6v.js";function s(){return e.jsx(r,{children:e.jsx(o,{className:"mobile-app"})})}t.createRoot(document.getElementById("root")).render(e.jsx(s,{}));

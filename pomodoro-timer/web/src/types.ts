@@ -1,9 +1,9 @@
-export type Phase = 'idle' | 'focus' | 'short_break' | 'long_break'
+export type Phase = 'idle' | 'focus' | 'break'
 
-export interface TimerSettings {
+export interface SessionConfig {
   focus_min: number
   break_min: number
-  focus_per_round: number
+  rounds: number
 }
 
 export interface TimerState {
@@ -11,9 +11,11 @@ export interface TimerState {
   running: boolean
   ends_at: number | null
   remaining_seconds: number
+  phase_total_seconds: number
   intent: string
-  focus_count_in_round: number
-  settings: TimerSettings
+  round_current: number
+  round_total: number
+  config: SessionConfig
 }
 
 export interface FocusSession {
@@ -25,6 +27,8 @@ export interface FocusSession {
   completed: number
   agent_id: string
   session_id: string
+  round_index: number
+  round_total: number
 }
 
 export interface Stats {
