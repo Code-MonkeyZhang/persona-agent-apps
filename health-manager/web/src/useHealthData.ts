@@ -9,16 +9,7 @@ import type {
   ServerMessage,
 } from './types'
 import { useI18n } from './i18n'
-
-/**
- * WebSocket origin-path base, frozen at module load before any client-side
- * routing runs. The page is only ever served at a shell entry URL, which is
- * the app root, the /mobile entry, or the /apps/<name> prefix when persona
- * agent proxies the panel, so the load-time pathname is always the entry.
- * Freezing it keeps reconnects pinned to the entry after the router moves
- * the URL to a deep route.
- */
-const WS_BASE = location.host + location.pathname.replace(/\/+$/, '')
+import { ENTRY_BASE } from './lib/router'
 
 /**
  * WebSocket hook: owns the single source of truth for all module state plus
@@ -67,7 +58,7 @@ export function useHealthData() {
 
     const connect = () => {
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const ws = new WebSocket(proto + '//' + WS_BASE + '/ws')
+      const ws = new WebSocket(proto + '//' + location.host + ENTRY_BASE + '/ws')
       wsRef.current = ws
 
       ws.onmessage = (e) => {
