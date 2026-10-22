@@ -1,1 +1,0 @@
-import{j as e,I as s,B as r,H as t,T as o,c as n}from"./index-B9F1lajS.js";function a(){return e.jsxs(s,{children:[e.jsx(r,{children:e.jsx(t,{className:"app"})}),e.jsx(o,{position:"top-center"})]})}n.createRoot(document.getElementById("root")).render(e.jsx(a,{}));
