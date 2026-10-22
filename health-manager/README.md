@@ -31,6 +31,8 @@
 | `get_imaging_history` | `exam_type?`, `limit?` | 查影像病理，按时间倒序 |
 | `get_health_journal` | `date?` | 读病历，不带日期返回索引，带日期返回全文 |
 | `update_health_journal` | `date`, `content`, `title?` | 写某日病历，按日期一文件，写前自动快照 |
+| `get_health_basics` | 无 | 读置顶的病史基础，含个人信息、过敏史、既往病史 |
+| `update_health_basics` | `content` | 整篇替换病史基础，写前自动快照 |
 
 ## Agent 通知
 

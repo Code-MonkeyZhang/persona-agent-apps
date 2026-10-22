@@ -20,6 +20,9 @@ KEEP_SNAPSHOTS = 5
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
+# Reserved non-date stem holding the pinned foundational history card.
+BASICS_STEM = "basics"
+
 
 def _parse_title(text: str) -> str | None:
     """First level-one heading of an entry, or None when it has none."""
@@ -55,14 +58,50 @@ class JournalStore:
             raise ValueError(f"日期 {date} 格式应为 YYYY-MM-DD")
         return self._root / f"{date}.md"
 
+    @property
+    def _basics_path(self) -> Path:
+        return self._root / f"{BASICS_STEM}.md"
+
+    def read_basics(self) -> dict | None:
+        """The foundational history entry, or None when it was never written."""
+        path = self._basics_path
+        if not path.exists():
+            return None
+        text = path.read_text(encoding="utf-8")
+        return {
+            "date": BASICS_STEM,
+            "title": _parse_title(text),
+            "content": text,
+            "updatedAt": _mtime(path),
+        }
+
+    def write_basics(self, content: str) -> dict:
+        """Create or replace the foundational history entry.
+
+        - Snapshots the existing file first when a snapshot root is set
+        - The entry is pinned by design and never joins the dated timeline
+        """
+        path = self._basics_path
+        if path.exists():
+            self._snapshot(path)
+        path.write_text(content, encoding="utf-8")
+        return {
+            "date": BASICS_STEM,
+            "title": _parse_title(content),
+            "updatedAt": _mtime(path),
+        }
+
     def list_entries(self) -> list[dict]:
         """Index of all entries, most recent first.
 
-        - Returns one {date, title, content, updatedAt} per file in the root
+        - Returns one {date, title, content, updatedAt} per dated file
         - The full text rides along so the WS snapshot can render the view
+        - The reserved basics entry stays out of the timeline
         """
         entries = []
         for path in self._root.glob("*.md"):
+            if path.stem == BASICS_STEM:
+                continue
             text = path.read_text(encoding="utf-8")
             entries.append(
                 {

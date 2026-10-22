@@ -44,6 +44,7 @@ export function useHealthData() {
     labResults: [],
     imagingFindings: [],
     journal: [],
+    journalBasics: null,
   })
   const [mockOn, setMockOn] = useState(false)
   const [version, setVersion] = useState('')
@@ -144,6 +145,13 @@ export function useHealthData() {
     },
     [send, t]
   )
+  const setJournalBasics = useCallback(
+    (content: string) => {
+      send({ type: 'set_basics', content })
+      toast.success(t('common.saved'))
+    },
+    [send, t]
+  )
 
   return {
     basics,
@@ -160,5 +168,6 @@ export function useHealthData() {
     setMacroGoals,
     toggleMock,
     setJournal,
+    setJournalBasics,
   }
 }

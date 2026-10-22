@@ -7,5 +7,6 @@
 - 化验用 record_lab_result 批量录入（自动判偏高偏低）、get_lab_history 查指标历史、list_lab_analytes 列指标、update_lab_result / delete_lab_result 按编号改删。
 - 影像病理结论用 record_imaging_finding 录入、get_imaging_history 查询。
 - 病历按日期一文件：get_health_journal 读、update_health_journal 写，写前自动快照。
+- 病史基础是置顶的根基信息，个人基本信息、过敏史、既往病史归属这里：get_health_basics 读、update_health_basics 整篇替换写，不要把它们写成按日期病历。
 - 记录类工具返回和上次或当日累计的对比，直接给用户简短反馈。
 - 疾病模块不做医疗诊断、不给健康决策建议，只记录数据并用大白话描述已记录数据的规律。

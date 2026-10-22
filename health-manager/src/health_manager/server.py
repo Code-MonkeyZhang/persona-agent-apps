@@ -679,6 +679,31 @@ TOOLS = [
             },
         },
     ),
+    types.Tool(
+        name="get_health_basics",
+        description=load_prompt("get_health_basics"),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                **_INJECTED_PARAMS,
+            },
+        },
+    ),
+    types.Tool(
+        name="update_health_basics",
+        description=load_prompt("update_health_basics"),
+        inputSchema={
+            "type": "object",
+            "required": ["content"],
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "description": "病史基础全文，markdown，整篇替换",
+                },
+                **_INJECTED_PARAMS,
+            },
+        },
+    ),
 ]
 
 
@@ -1136,6 +1161,18 @@ class HealthServer:
         log("INFO", "journal_written", date=date, title=entry["title"])
         return f"已写入 {date} 的病历「{entry['title'] or '未命名'}」"
 
+    def get_health_basics(self) -> str:
+        basics = self.journal.read_basics()
+        if basics is None:
+            return "还没有病史基础，可用 update_health_basics 写入"
+        return basics["content"]
+
+    def update_health_basics(self, content: str) -> str:
+        """Replace the foundational history entry, snapshotting the old one."""
+        entry = self.journal.write_basics(content)
+        log("INFO", "basics_written", title=entry["title"])
+        return f"已更新病史基础「{entry['title'] or '未命名'}」"
+
     # --- WebSocket handler ---
 
     async def handle_websocket(self, websocket: WebSocket) -> None:
@@ -1181,6 +1218,9 @@ class HealthServer:
                             str(msg["date"]), str(msg["content"]), msg.get("title")
                         )
                         log("INFO", "journal_written_via_ws", date=entry["date"])
+                    elif mtype == "set_basics":
+                        entry = self.journal.write_basics(str(msg["content"]))
+                        log("INFO", "basics_written_via_ws", title=entry["title"])
                     else:
                         continue
                     await self.broadcast()
@@ -1201,6 +1241,7 @@ class HealthServer:
             "schemaVersion": self.db.schema_version,
         }
         snap["disease"]["journal"] = self.journal.list_entries()
+        snap["disease"]["journalBasics"] = self.journal.read_basics()
         return snap
 
     async def broadcast(self) -> None:
@@ -1570,6 +1611,11 @@ def _make_handlers(server: HealthServer):
             text = server.update_health_journal(
                 args["date"], args["content"], args.get("title")
             )
+            await server.broadcast()
+        elif name == "get_health_basics":
+            text = server.get_health_basics()
+        elif name == "update_health_basics":
+            text = server.update_health_basics(args["content"])
             await server.broadcast()
         else:
             text = f"未知工具: {name}"

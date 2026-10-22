@@ -40,7 +40,12 @@ export function useHealthData() {
     init.fitness ?? { strengthRecords: [], workouts: [] }
   )
   const [disease] = useState<DiseaseState>(
-    init.disease ?? { labResults: [], imagingFindings: [], journal: [] }
+    init.disease ?? {
+      labResults: [],
+      imagingFindings: [],
+      journal: [],
+      journalBasics: null,
+    }
   )
   const [mockOn] = useState(init.mockOn ?? true)
   const [version] = useState(init.version ?? '')
@@ -60,6 +65,7 @@ export function useHealthData() {
     (_date: string, _content: string) => noop(),
     [noop]
   )
+  const setJournalBasics = useCallback((_content: string) => noop(), [noop])
 
   return {
     basics,
@@ -76,5 +82,6 @@ export function useHealthData() {
     setMacroGoals,
     toggleMock,
     setJournal,
+    setJournalBasics,
   }
 }

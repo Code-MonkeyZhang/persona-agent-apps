@@ -1,1 +1,0 @@
-import{j as e,I as s,B as o,H as r,T as t,c as n}from"./index-CUkXdl-u.js";function a(){return e.jsxs(s,{children:[e.jsx(o,{children:e.jsx(r,{className:"mobile-app"})}),e.jsx(t,{position:"top-center"})]})}n.createRoot(document.getElementById("root")).render(e.jsx(a,{}));

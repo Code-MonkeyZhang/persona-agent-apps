@@ -198,6 +198,19 @@ def main() -> None:
     )
 
     journal = JournalStore(APP_ROOT / "data" / "journal.mock")
+    journal.write_basics(
+        "# 病史基础\n\n"
+        "## 个人基本信息\n\n"
+        "- 姓名：张宇\n"
+        "- 身高：175 cm\n"
+        "- 血型：O 型\n"
+        "- 过敏史：无已知过敏\n\n"
+        "## 既往病史\n\n"
+        "- IgA 肾病（2020 年确诊，IV 级，牛津分型 M1E1S1T1）\n"
+        "- 青光眼（2014 年外伤史）\n"
+        "- 右眼白内障（人工晶体植入术后）\n"
+        "- TMJ 颞下颌关节紊乱\n"
+    )
     journal.write(
         "2026-08-30",
         "复查，肌酐 107 持平，24h 尿蛋白 722 mg 偏高。医嘱：继续当前用药，低盐优质蛋白饮食。",

@@ -39,6 +39,7 @@ export function HealthApp({ className }: { className?: string }) {
     setMacroGoals,
     toggleMock,
     setJournal,
+    setJournalBasics,
   } = useHealthData()
   const location = useLocation()
   const navigate = useNavigate()
@@ -171,8 +172,10 @@ export function HealthApp({ className }: { className?: string }) {
                 element={
                   <JournalPage
                     entries={disease.journal}
+                    basics={disease.journalBasics}
                     onBack={back}
                     onSetJournal={setJournal}
+                    onSetBasics={setJournalBasics}
                   />
                 }
               />

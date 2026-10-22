@@ -54,3 +54,28 @@ def test_bad_date_rejected(tmp_path):
         else:
             raise AssertionError(f"{bad} should be rejected")
     assert store.list_entries() == []
+
+
+def test_basics_lives_outside_timeline(tmp_path):
+    store = JournalStore(tmp_path / "journal", tmp_path / "snapshots")
+    store.write("2026-09-29", "复查。", "肾内科复查")
+    store.write_basics("# 病史基础\n\n过敏史：无")
+
+    assert store.read_basics() is not None
+    assert "过敏史" in store.read_basics()["content"]
+    # The reserved entry never joins the dated timeline.
+    assert [e["date"] for e in store.list_entries()] == ["2026-09-29"]
+
+
+def test_basics_absent_returns_none(tmp_path):
+    store = JournalStore(tmp_path / "journal")
+    assert store.read_basics() is None
+
+
+def test_basics_overwrite_snapshots_old_version(tmp_path):
+    store = JournalStore(tmp_path / "journal", tmp_path / "snapshots", keep=5)
+    store.write_basics("v1")
+    store.write_basics("v2")
+    files = sorted((tmp_path / "snapshots" / "basics").glob("*.md"))
+    assert len(files) == 1
+    assert store.read_basics()["content"] == "v2"

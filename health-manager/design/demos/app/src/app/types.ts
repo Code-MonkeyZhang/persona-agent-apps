@@ -115,6 +115,7 @@ export interface DiseaseState {
   labResults: LabResult[]
   imagingFindings: ImagingFinding[]
   journal: JournalEntry[]
+  journalBasics: JournalEntry | null
 }
 
 export interface ServerMessage {
