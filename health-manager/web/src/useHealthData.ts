@@ -1,19 +1,24 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { toast } from 'sonner'
 import type {
   BasicsState,
   DietState,
+  DiseaseState,
   FitnessState,
   GoalMode,
   ServerMessage,
 } from './types'
+import { useI18n } from './i18n'
 
 /**
  * WebSocket hook: owns the single source of truth for all module state plus
  * server meta (mock flag, versions). Auto-reconnects 2s after the socket drops.
  * The server pushes full state (namespaced by module) on every change, so the
- * frontend stays a pure render layer.
+ * frontend stays a pure render layer. Writes are fire-and-forget: success is
+ * confirmed locally and failures come back through the error channel.
  */
 export function useHealthData() {
+  const { t } = useI18n()
   const [basics, setBasics] = useState<BasicsState>({ profile: null, metrics: [] })
   const [diet, setDiet] = useState<DietState>({
     entries: [],
@@ -24,6 +29,11 @@ export function useHealthData() {
   const [fitness, setFitness] = useState<FitnessState>({
     strengthRecords: [],
     workouts: [],
+  })
+  const [disease, setDisease] = useState<DiseaseState>({
+    labResults: [],
+    imagingFindings: [],
+    journal: [],
   })
   const [mockOn, setMockOn] = useState(false)
   const [version, setVersion] = useState('')
@@ -38,6 +48,7 @@ export function useHealthData() {
       if (msg.basics) setBasics(msg.basics)
       if (msg.diet) setDiet(msg.diet)
       if (msg.fitness) setFitness(msg.fitness)
+      if (msg.disease) setDisease(msg.disease)
       if (msg.mockOn !== undefined) setMockOn(msg.mockOn)
       if (msg.version !== undefined) setVersion(msg.version)
       if (msg.schemaVersion !== undefined) setSchemaVersion(msg.schemaVersion)
@@ -45,13 +56,19 @@ export function useHealthData() {
 
     const connect = () => {
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const base = location.host + location.pathname.replace(/\/$/, '')
-      const ws = new WebSocket(proto + '//' + base + '/ws')
+      // The WS endpoint is fixed by shell, not by the current route, so deep
+      // links reconnect reliably after a refresh.
+      const wsPath = location.pathname.startsWith('/mobile') ? '/mobile/ws' : '/ws'
+      const ws = new WebSocket(proto + '//' + location.host + wsPath)
       wsRef.current = ws
 
       ws.onmessage = (e) => {
         const msg: ServerMessage = JSON.parse(e.data)
-        if (msg.type === 'error') return
+        if (msg.type === 'error') {
+          // Rejected writes surface as a toast instead of being dropped.
+          toast.error(msg.message || t('common.serverError'))
+          return
+        }
         apply(msg)
       }
 
@@ -74,24 +91,58 @@ export function useHealthData() {
     wsRef.current?.send(JSON.stringify(payload))
   }, [])
 
-  const setHeight = useCallback((height: number) => send({ type: 'set_height', height }), [send])
-  const setName = useCallback((name: string) => send({ type: 'set_name', name }), [send])
-  const setDietGoal = useCallback((goal: number) => send({ type: 'set_diet_goal', goal }), [send])
+  // Every setter sends over WS and confirms locally; the server echoes the
+  // full state and reports failures through the error channel.
+  const setHeight = useCallback(
+    (height: number) => {
+      send({ type: 'set_height', height })
+      toast.success(t('common.saved'))
+    },
+    [send, t]
+  )
+  const setName = useCallback(
+    (name: string) => {
+      send({ type: 'set_name', name })
+      toast.success(t('common.saved'))
+    },
+    [send, t]
+  )
+  const setDietGoal = useCallback(
+    (goal: number) => {
+      send({ type: 'set_diet_goal', goal })
+      toast.success(t('common.saved'))
+    },
+    [send, t]
+  )
   const setGoalMode = useCallback(
-    (mode: GoalMode) => send({ type: 'set_goal_mode', mode }),
-    [send]
+    (mode: GoalMode) => {
+      send({ type: 'set_goal_mode', mode })
+      toast.success(t('common.saved'))
+    },
+    [send, t]
   )
   const setMacroGoals = useCallback(
-    (carbs: number, protein: number, fat: number) =>
-      send({ type: 'set_macro_goals', carbs, protein, fat }),
-    [send]
+    (carbs: number, protein: number, fat: number) => {
+      send({ type: 'set_macro_goals', carbs, protein, fat })
+      toast.success(t('common.saved'))
+    },
+    [send, t]
   )
+  // Mock toggling is a debug switch and stays silent.
   const toggleMock = useCallback(() => send({ type: 'toggle_mock' }), [send])
+  const setJournal = useCallback(
+    (date: string, content: string) => {
+      send({ type: 'set_journal', date, content })
+      toast.success(t('common.saved'))
+    },
+    [send, t]
+  )
 
   return {
     basics,
     diet,
     fitness,
+    disease,
     mockOn,
     version,
     schemaVersion,
@@ -101,5 +152,6 @@ export function useHealthData() {
     setGoalMode,
     setMacroGoals,
     toggleMock,
+    setJournal,
   }
 }

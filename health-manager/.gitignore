@@ -5,3 +5,10 @@
 raw_data/
 rawdata2markdown/
 model/
+
+# Vendored health-data repo clone under design, never commit medical records
+design/reference/
+
+# Design demo app dependencies and build output
+design/demos/app/node_modules/
+design/demos/app/dist/

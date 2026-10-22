@@ -11,7 +11,9 @@ import random
 import datetime
 from pathlib import Path
 
+from health_manager.analytes import ANALYTES, judge_flag, ref_text
 from health_manager.db import HealthDB
+from health_manager.journal import JournalStore
 
 APP_ROOT = Path(__file__).resolve().parent.parent
 MOCK_DB = APP_ROOT / "data" / "health.mock.db"
@@ -151,12 +153,70 @@ def main() -> None:
     for meal, food, cal, qty, c, p, f in TODAY:
         db.record_diet("2026-08-05", food, cal, meal, qty, c, p, f)
 
+    # --- Disease: lab story across three visits + imaging + mock journal ---
+    lab_visits = [
+        ("2026-03-08", [
+            ("肌酐", 108), ("尿素", 5.35), ("尿酸", 536), ("胱抑素C", 1.19),
+            ("总胆固醇", 5.75), ("低密度脂蛋白胆固醇", 3.63),
+            ("24小时尿蛋白", 1012.0), ("尿蛋白", "2+"),
+        ]),
+        ("2026-08-30", [
+            ("肌酐", 107), ("尿素", 6.38), ("尿酸", 235), ("胱抑素C", 1.19),
+            ("总胆固醇", 5.51), ("低密度脂蛋白胆固醇", 3.59),
+            ("24小时尿蛋白", 722.3), ("尿蛋白", "2+"),
+        ]),
+        ("2026-09-29", [
+            ("肌酐", 106), ("尿素", 9.51), ("尿酸", 232), ("胱抑素C", 1.23),
+            ("总胆固醇", 5.37), ("低密度脂蛋白胆固醇", 3.59),
+            ("24小时尿蛋白", 392.7), ("尿蛋白", "2+"),
+        ]),
+    ]
+    for date, items in lab_visits:
+        for analyte, value in items:
+            info = ANALYTES[analyte]
+            value_num = value if not isinstance(value, str) else None
+            value_text = value if isinstance(value, str) else None
+            db.record_lab_result(
+                date=date,
+                category=info.group,
+                analyte=analyte,
+                value_num=value_num,
+                value_text=value_text,
+                unit=info.unit,
+                ref_low=info.ref_low,
+                ref_high=info.ref_high,
+                ref_text=ref_text(info.ref_low, info.ref_high),
+                abnormal_flag=judge_flag(value_num, info.ref_low, info.ref_high),
+            )
+    db.record_imaging_finding(
+        "2020-10-13", "肾穿病理",
+        "病理诊断：局灶增生硬化型 IgA 肾病；Lee 分级: IV 级；牛津分型: M0 E1 S1 T1",
+    )
+    db.record_imaging_finding(
+        "2026-10-10", "腹部超声",
+        "双肾形态正常，实质回声稍增强，未见占位；集合系统未见分离；双肾血流充盈尚好",
+    )
+
+    journal = JournalStore(APP_ROOT / "data" / "journal.mock")
+    journal.write(
+        "2026-08-30",
+        "复查，肌酐 107 持平，24h 尿蛋白 722 mg 偏高。医嘱：继续当前用药，低盐优质蛋白饮食。",
+        "肾内科复查",
+    )
+    journal.write(
+        "2026-09-29",
+        "复查，肌酐 106 持平，尿素 9.51 偏高，24h 尿蛋白降至 393 mg，为年内最低。医嘱：一月后复查肾功能。",
+        "肾内科复查",
+    )
+
     snap = db.get_snapshot()
     print(f"mock db seeded at {MOCK_DB}")
     print(f"  metrics={len(snap['basics']['metrics'])} "
           f"strength={len(snap['fitness']['strengthRecords'])} "
           f"workouts={len(snap['fitness']['workouts'])} "
-          f"diet={len(snap['diet']['entries'])} goal={snap['diet']['goal']}")
+          f"diet={len(snap['diet']['entries'])} goal={snap['diet']['goal']} "
+          f"labs={len(snap['disease']['labResults'])} "
+          f"imaging={len(snap['disease']['imagingFindings'])}")
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+import { useParams } from 'react-router'
 import NumberFlow from '@number-flow/react'
 import type { WorkoutEntry } from '../types'
 import { formatDate } from '../helpers'
@@ -6,14 +7,14 @@ import { DetailHeader } from './DetailHeader'
 import { Card, Row, SectionLabel } from './ui/primitives'
 
 interface Props {
-  date: string
   workouts: WorkoutEntry[]
   onBack: () => void
 }
 
 /** Push view: total calories + exercise breakdown for one workout day. */
-export function WorkoutDayDetail({ date, workouts, onBack }: Props) {
+export function WorkoutDayDetail({ workouts, onBack }: Props) {
   const { t, locale } = useI18n()
+  const { date = '' } = useParams()
   const dayWorkouts = workouts.filter((w) => w.date === date)
   const totalCalories = dayWorkouts.reduce((s, w) => s + (w.calories ?? 0), 0)
 

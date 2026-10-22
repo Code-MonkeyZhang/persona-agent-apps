@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type { LucideIcon } from 'lucide-react'
 import { Dumbbell, Flame, Footprints } from 'lucide-react'
 import type { FitnessState, StrengthRecord, WorkoutEntry } from '../types'
@@ -12,11 +11,9 @@ import {
   workoutCaloriesByDate,
 } from '../helpers'
 import { useI18n } from '../i18n'
-import { pushVariants, fadeVariants, PAGE_TRANSITION } from '@/lib/transitions'
+import { useDrill, routes } from '@/lib/router'
 import { Sparkline } from './Sparkline'
-import { StrengthDetail } from './StrengthDetail'
 import { WorkoutCalendar } from './WorkoutCalendar'
-import { WorkoutDayDetail } from './WorkoutDayDetail'
 import { Card, Chevron, Row, SectionLabel, Tile } from './ui/primitives'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 
@@ -24,107 +21,41 @@ interface Props {
   fitness: FitnessState
 }
 
-type FitnessDetail =
-  | { kind: 'none' }
-  | { kind: 'workout-day'; date: string }
-  | { kind: 'strength'; exercise: string; metric: string }
-
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   '有氧': Flame,
   '上半身': Dumbbell,
   '下半身': Footprints,
 }
 
-/** Fitness tab: workout diary (default) and ability records, with push/pop
- *  drill-in for day detail and exercise trends. */
+/** Fitness tab: workout diary (default) and ability records; day and
+ *  exercise drill-ins are router navigations. */
 export function FitnessPage({ fitness }: Props) {
   const { t } = useI18n()
+  const drill = useDrill()
   const [segment, setSegment] = useState<'diary' | 'ability'>('diary')
-  const [detail, setDetail] = useState<FitnessDetail>({ kind: 'none' })
-  const [dir, setDir] = useState(0)
-  const reduce = useReducedMotion()
-  const variants = reduce ? fadeVariants : pushVariants
-
-  const openDetail = (d: Exclude<FitnessDetail, { kind: 'none' }>) => {
-    setDir(1)
-    setDetail(d)
-  }
-  const closeDetail = () => {
-    setDir(-1)
-    setDetail({ kind: 'none' })
-  }
 
   return (
-    <AnimatePresence mode="wait" custom={dir} initial={false}>
-      {detail.kind === 'workout-day' ? (
-        <motion.div
-          key="workout-day"
-          custom={dir}
-          variants={variants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={PAGE_TRANSITION}
-        >
-          <WorkoutDayDetail
-            date={detail.date}
-            workouts={fitness.workouts}
-            onBack={closeDetail}
-          />
-        </motion.div>
-      ) : detail.kind === 'strength' ? (
-        <motion.div
-          key="strength"
-          custom={dir}
-          variants={variants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={PAGE_TRANSITION}
-        >
-          <StrengthDetail
-            records={fitness.strengthRecords}
-            exercise={detail.exercise}
-            metric={detail.metric}
-            onBack={closeDetail}
-          />
-        </motion.div>
-      ) : (
-        <motion.div
-          key="main"
-          custom={dir}
-          variants={variants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={PAGE_TRANSITION}
-        >
-          <Tabs
-            value={segment}
-            onValueChange={(v) => setSegment(v as 'diary' | 'ability')}
-          >
-            <TabsList className="mb-4 grid w-full grid-cols-2">
-              <TabsTrigger value="diary">{t('fitness.diary')}</TabsTrigger>
-              <TabsTrigger value="ability">{t('fitness.ability')}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="diary">
-              <DiaryView
-                workouts={fitness.workouts}
-                onSelectDate={(date) => openDetail({ kind: 'workout-day', date })}
-              />
-            </TabsContent>
-            <TabsContent value="ability">
-              <AbilityList
-                records={fitness.strengthRecords}
-                onSelect={(rec) =>
-                  openDetail({ kind: 'strength', exercise: rec.exercise, metric: rec.metric })
-                }
-              />
-            </TabsContent>
-          </Tabs>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <Tabs
+      value={segment}
+      onValueChange={(v) => setSegment(v as 'diary' | 'ability')}
+    >
+      <TabsList className="mb-4 grid w-full grid-cols-2">
+        <TabsTrigger value="diary">{t('fitness.diary')}</TabsTrigger>
+        <TabsTrigger value="ability">{t('fitness.ability')}</TabsTrigger>
+      </TabsList>
+      <TabsContent value="diary">
+        <DiaryView
+          workouts={fitness.workouts}
+          onSelectDate={(date) => drill(`/fitness/day/${date}`)}
+        />
+      </TabsContent>
+      <TabsContent value="ability">
+        <AbilityList
+          records={fitness.strengthRecords}
+          onSelect={(rec) => drill(routes.strength(rec.exercise, rec.metric))}
+        />
+      </TabsContent>
+    </Tabs>
   )
 }
 

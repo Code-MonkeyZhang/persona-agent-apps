@@ -1,3 +1,4 @@
+import { ChevronLeft } from 'lucide-react'
 import { useI18n } from '../i18n'
 
 interface Props {
@@ -5,6 +6,7 @@ interface Props {
   onBack: () => void
 }
 
+/** Large-title detail header with an iOS-style chevron back button. */
 export function DetailHeader({ title, onBack }: Props) {
   const { t } = useI18n()
   return (
@@ -12,9 +14,9 @@ export function DetailHeader({ title, onBack }: Props) {
       <button
         onClick={onBack}
         aria-label={t('common.back')}
-        className="press cursor-pointer border-none bg-none pr-1.5 text-[32px] font-light leading-none text-primary mobile:pr-2.5 mobile:text-4xl"
+        className="press -ml-1.5 flex cursor-pointer items-center justify-center border-none bg-none p-1.5 text-primary mobile:-ml-2"
       >
-        ‹
+        <ChevronLeft size={26} strokeWidth={2.5} />
       </button>
       <span className="text-[17px] font-semibold mobile:text-lg">{title}</span>
     </div>

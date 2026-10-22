@@ -1,4 +1,4 @@
-import type { BasicsState, DietState, FitnessState } from './types'
+import type { BasicsState, DietState, DiseaseState, FitnessState } from './types'
 import type { TFunc } from './i18n'
 import type { TKey } from './i18n/locales'
 import {
@@ -25,7 +25,13 @@ import {
  *   are recent or notable.
  * - Every card gets a tier; sorting floats notable ones to the top.
  */
-export type CardGo = 'weight' | 'blood_pressure' | 'profile' | 'diet' | 'fitness'
+export type CardGo =
+  | 'weight'
+  | 'blood_pressure'
+  | 'profile'
+  | 'diet'
+  | 'fitness'
+  | 'disease'
 
 export type TagTone = 'warn' | 'notice' | 'info'
 
@@ -63,6 +69,7 @@ export function buildSummary(
   basics: BasicsState,
   diet: DietState,
   fitness: FitnessState,
+  disease: DiseaseState,
   t: TFunc
 ): Summary {
   const today = todayStr()
@@ -81,6 +88,9 @@ export function buildSummary(
   if (calorieCard) cards.push(calorieCard)
 
   cards.push(...buildStrengthCards(fitness, today, t))
+
+  const labCard = buildLabAbnormalCard(disease, today, t)
+  if (labCard) cards.push(labCard)
 
   cards.sort((a, b) => b.tier - a.tier || a.recencyDays - b.recencyDays)
 
@@ -260,10 +270,46 @@ function buildStrengthCards(
   return cards
 }
 
+/**
+ * Lab abnormal card: analytes whose latest value is out of range.
+ * Sits at the attention tier so it floats to the top of the home tab.
+ */
+function buildLabAbnormalCard(
+  disease: DiseaseState,
+  today: string,
+  t: TFunc
+): SummaryCard | null {
+  const latest = new Map<string, DiseaseState['labResults'][number]>()
+  for (const row of disease.labResults) latest.set(row.analyte, row)
+  const flagged = [...latest.values()].filter((r) => r.abnormalFlag)
+  if (flagged.length === 0) return null
+
+  const newest = flagged.reduce((a, b) => (a.date > b.date ? a : b)).date
+  const names = flagged.map((r) => r.analyte)
+  const sub = names.slice(0, 3).join('、') + (names.length > 3 ? '…' : '')
+  return {
+    key: 'lab_abnormal',
+    label: t('summary.labAbnormal'),
+    value: String(flagged.length),
+    unit: t('summary.unit.labItems'),
+    sub,
+    tag: 'summary.tag.attention',
+    tagTone: 'warn',
+    go: 'disease',
+    tier: TIER_ATTENTION,
+    recencyDays: daysAgo(newest, today),
+  }
+}
+
 function buildStatus(cards: SummaryCard[], basics: BasicsState, t: TFunc): string {
   const top = cards[0]
   if (!top) return t('summary.status.start')
-  if (top.tier === TIER_ATTENTION) return t('summary.status.bpHigh')
+  if (top.tier === TIER_ATTENTION) {
+    if (top.key === 'lab_abnormal') {
+      return t('summary.status.labAbnormal', { n: top.value })
+    }
+    return t('summary.status.bpHigh')
+  }
 
   const pr = cards.find((c) => c.tag === 'summary.tag.progress')
   if (pr)

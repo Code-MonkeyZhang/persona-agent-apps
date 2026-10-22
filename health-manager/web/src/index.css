@@ -162,3 +162,34 @@
   color: var(--muted-foreground);
   opacity: 0.4;
 }
+
+/* --- ByteMD journal editor ------------------------------------------------ */
+
+/* The editor fills the journal card with the app's soft frame and a taller
+   writing area than the 300px default. */
+.journal-editor .bytemd {
+  height: 420px;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: inherit;
+}
+
+.journal-editor .bytemd-toolbar {
+  border-bottom: 1px solid var(--border);
+}
+
+.journal-editor .bytemd-toolbar-right .bytemd-tippy-right,
+.journal-editor .bytemd-toolbar-icon:hover {
+  color: var(--primary);
+}
+
+.journal-editor .CodeMirror {
+  height: 100%;
+  background: transparent;
+  font-family: inherit;
+}
+
+.journal-editor .CodeMirror-scroll {
+  font-size: 15px;
+  line-height: 1.7;
+}

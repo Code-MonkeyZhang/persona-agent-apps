@@ -1,3 +1,4 @@
+import { useParams, useSearchParams } from 'react-router'
 import NumberFlow from '@number-flow/react'
 import type { StrengthRecord } from '../types'
 import { daysBetween, formatDate } from '../helpers'
@@ -9,14 +10,15 @@ import { Card, Row, SectionLabel } from './ui/primitives'
 
 interface Props {
   records: StrengthRecord[]
-  exercise: string
-  metric: string
   onBack: () => void
 }
 
 /** Detail view for one exercise + metric: latest value, trend line, history. */
-export function StrengthDetail({ records, exercise, metric, onBack }: Props) {
+export function StrengthDetail({ records, onBack }: Props) {
   const { t, locale } = useI18n()
+  const { exercise = '' } = useParams()
+  const [searchParams] = useSearchParams()
+  const metric = searchParams.get('metric') ?? ''
   const same = records
     .filter((r) => r.exercise === exercise && r.metric === metric)
     .sort((a, b) => a.date.localeCompare(b.date))

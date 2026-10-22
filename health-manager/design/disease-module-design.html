@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>疾病模块 设计预览</title>
+<style>
+:root {
+  --background: #f2f2f7; --foreground: #1c1c1e; --card: #ffffff;
+  --muted: #8e8e93; --border: #e5e5ea; --primary: #14b8a6;
+  --danger: #ef4444; --ok: #16a34a; --blue: #3b82f6;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: #ececf1; color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+nav#nav {
+  position: fixed; left: 0; top: 0; bottom: 0; width: 212px;
+  background: #fff; border-right: 1px solid var(--border);
+  padding: 20px 12px; overflow-y: auto; z-index: 10;
+}
+nav#nav .brand { font-size: 15px; font-weight: 700; padding: 0 10px 14px; }
+nav#nav .brand span { display: block; font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 4px; }
+nav#nav .navgroup { font-size: 11px; color: var(--muted); padding: 14px 10px 6px; letter-spacing: 2px; }
+nav#nav a {
+  display: block; padding: 7px 10px; border-radius: 8px; font-size: 13px;
+  color: #3a3a3e; text-decoration: none;
+}
+nav#nav a.on { background: #ccfbf1; color: #0f766e; font-weight: 600; }
+main { margin-left: 228px; padding: 28px 32px 80px; max-width: 1020px; }
+.pagehead h1 { font-size: 24px; margin-bottom: 6px; }
+.pagehead p { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+section { background: var(--card); border-radius: 16px; padding: 26px 28px; margin-bottom: 26px; scroll-margin-top: 16px; }
+section .cap { font-size: 12px; color: var(--primary); font-weight: 700; margin-bottom: 4px; }
+section h2 { font-size: 19px; margin-bottom: 14px; }
+.rowflex { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+.pts { flex: 1; min-width: 260px; }
+.pts h4 { font-size: 13px; margin: 14px 0 8px; color: #3a3a3e; }
+.pts h4:first-child { margin-top: 0; }
+.pts li { font-size: 13px; line-height: 1.75; color: #3f3f46; margin-left: 18px; }
+.figure { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.figure .figcap { font-size: 12px; color: var(--muted); }
+/* 手机壳 */
+.phone { width: 302px; background: #1c1c1e; border-radius: 46px; padding: 10px; box-shadow: 0 14px 34px rgba(0,0,0,.16); }
+.screen { background: var(--background); border-radius: 36px; overflow: hidden; height: 608px; display: flex; flex-direction: column; }
+.statusbar { height: 30px; display: flex; justify-content: space-between; align-items: center; padding: 6px 22px 0; font-size: 11px; font-weight: 600; }
+.appbar { padding: 8px 18px 6px; }
+.appbar .t { font-size: 22px; font-weight: 800; }
+.appbar .s { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.content { flex: 1; overflow: hidden; padding: 6px 12px 8px; display: flex; flex-direction: column; gap: 10px; }
+.tabbar { height: 54px; background: rgba(255,255,255,.94); border-top: 1px solid var(--border); display: flex; }
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; color: var(--muted); }
+.tab .ic { width: 20px; height: 20px; border-radius: 6px; background: currentColor; opacity: .35; }
+.tab.on { color: #0f9488; font-weight: 600; }
+.tab.on .ic { opacity: 1; }
+.card { background: var(--card); border-radius: 14px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.card .ct { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+.card .cs { font-size: 10.5px; color: var(--muted); }
+.alertcard { background: #fef2f2; border: 1px solid #fecaca; border-radius: 14px; padding: 12px 14px; }
+.alertcard .ct { color: #b91c1c; }
+.mrow { display: flex; justify-content: space-between; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.mrow:last-child { border-bottom: 0; }
+.mrow .nm { color: #3f3f46; }
+.mrow .vl { font-weight: 700; }
+.mrow .un { font-size: 10px; color: var(--muted); font-weight: 400; margin-left: 3px; }
+.up { color: var(--danger); }
+.ok { color: #0f9488; }
+.abadge { background: #fee2e2; color: #b91c1c; border-radius: 6px; padding: 1px 6px; font-size: 10px; font-weight: 600; margin-left: 6px; vertical-align: 1px; }
+.seg { display: flex; background: #e6e6eb; border-radius: 10px; padding: 2px; }
+.seg .sbtn { flex: 1; text-align: center; padding: 6px 0; border-radius: 8px; font-size: 13px; color: var(--muted); }
+.seg .sbtn.on { background: #fff; color: var(--foreground); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.chiprow { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { padding: 4px 10px; border-radius: 999px; background: #fff; border: 1px solid var(--border); font-size: 11.5px; color: var(--muted); }
+.chip.on { background: #ccfbf1; border-color: #99e5d8; color: #0f766e; font-weight: 600; }
+.catrow { display: flex; justify-content: space-between; align-items: center; padding: 10px 2px; border-bottom: 1px solid var(--border); }
+.catrow:last-child { border-bottom: 0; }
+.catrow .l { font-size: 13.5px; font-weight: 600; }
+.catrow .r { font-size: 10.5px; color: var(--muted); }
+.crumb { font-size: 11px; color: var(--muted); }
+.crumb b { color: #0f766e; }
+.statchips { display: flex; gap: 6px; }
+.statchip { flex: 1; background: #f7f7fa; border-radius: 10px; padding: 7px 8px; text-align: center; }
+.statchip .v { font-size: 14px; font-weight: 700; }
+.statchip .k { font-size: 9.5px; color: var(--muted); margin-top: 2px; }
+/* 聊天 */
+.chat { display: flex; flex-direction: column; gap: 8px; padding: 4px 2px; overflow: hidden; }
+.msg-u { align-self: flex-end; background: var(--primary); color: #fff; border-radius: 16px 16px 4px 16px; padding: 8px 12px; font-size: 12.5px; max-width: 84%; line-height: 1.5; }
+.msg-a { align-self: flex-start; background: #fff; border-radius: 16px 16px 16px 4px; padding: 10px 12px; font-size: 12.5px; max-width: 90%; line-height: 1.55; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+.msg-a b.hi { color: #b91c1c; }
+.msg-a .sub { color: var(--muted); font-size: 11px; margin-top: 6px; }
+.toolpill { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; background: #ececf1; border: 1px dashed #c4c4ca; border-radius: 999px; padding: 3px 10px; font-size: 10.5px; color: #55555c; }
+.toolpill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+/* 图表 */
+.chartbox { background: var(--card); border-radius: 16px; padding: 18px 18px 12px; }
+.chartbox h3 { font-size: 14px; margin-bottom: 2px; }
+.chartbox .sub { font-size: 11.5px; color: var(--muted); margin-bottom: 10px; }
+.chartbox svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+.lg { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: #4b4b52; }
+.lg .sw { width: 10px; height: 10px; border-radius: 50%; }
+/* 徽标与状态 */
+.st { display: inline-block; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 600; margin-left: 8px; vertical-align: 1px; }
+.st-ok { background: #dcfce7; color: #15803d; }
+.st-no { background: #fee2e2; color: #b91c1c; }
+/* 存储分层 */
+.store { border-radius: 12px; border: 1px solid var(--border); background: #fafafa; padding: 14px 16px 14px 18px; position: relative; margin-bottom: 12px; }
+.store::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 12px 0 0 12px; }
+.store.blue::before { background: var(--blue); }
+.store.gray::before { background: #9ca3af; }
+.store h4 { font-size: 14px; margin-bottom: 4px; }
+.store p { font-size: 12.5px; color: #52525b; line-height: 1.6; }
+/* 导入步骤 */
+.steps { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.step { background: #f0fdf4; border: 1px solid #bbf7d0; color: #14532d; border-radius: 10px; padding: 8px 12px; font-size: 12.5px; font-weight: 600; }
+.arrow { color: var(--ok); font-size: 16px; font-weight: 700; }
+/* 决策表 */
+table.dt { width: 100%; border-collapse: collapse; }
+table.dt th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+table.dt td { font-size: 13px; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+/* 原理图 */
+.dg { background: #fff; border-radius: 16px; padding: 12px; }
+.dg svg { width: 100%; height: auto; display: block; }
+.notegray { font-size: 12.5px; color: #52525b; background: #fafafa; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <div class="brand">疾病模块<br><span>设计预览 · plan 迭代稿</span></div>
+  <div class="navgroup">设计段</div>
+  <a href="#sec-shell">疾病页骨架</a>
+  <a href="#sec-browser">指标浏览</a>
+  <a href="#sec-trend">趋势图与异常标注</a>
+  <a href="#sec-summary">摘要页异常卡</a>
+  <a href="#sec-chat">对话录入</a>
+  <a href="#sec-journal">病历</a>
+  <a href="#sec-empty">冷启动空态</a>
+  <div class="navgroup">原理段</div>
+  <a href="#sec-structure">数据结构今昔</a>
+  <a href="#sec-flow">数据流</a>
+  <a href="#sec-tools">MCP 工具盘点</a>
+  <a href="#sec-storage">存储分层</a>
+  <a href="#sec-import">存量导入</a>
+  <div class="navgroup">拓展段</div>
+  <a href="#sec-future">二期与待定项</a>
+</nav>
+
+<main>
+<div class="pagehead">
+  <h1>疾病模块设计预览</h1>
+  <p>一期范围化验数据加病历 · 视觉规格对齐现有 App · 图表数据取自真实历史记录</p>
+</div>
+
+<!-- ============ 设计段 ============ -->
+
+<section id="sec-shell">
+  <div class="cap">设计段</div>
+  <h2>疾病页骨架与导航</h2>
+  <div class="rowflex">
+    <div class="figure">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>●●● ●●</span></div>
+        <div class="appbar"><div class="t">疾病</div><div class="s">最近化验 2026-09-29</div></div>
+        <div class="content">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <div class="card" style="margin:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:5px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:rgba(14,165,233,.12);color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:15px;">༆</span>
+              <span style="font-size:11px;font-weight:500;">化验指标</span>
+            </div>
+            <div class="card" style="margin:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:5px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:rgba(99,102,241,.12);color:#4f46e5;display:flex;align-items:center;justify-content:center;font-size:15px;">⌗</span>
+              <span style="font-size:11px;font-weight:500;">影像检查</span>
+            </div>
+            <div class="card" style="margin:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:5px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:rgba(20,184,166,.12);color:#0d9488;display:flex;align-items:center;justify-content:center;font-size:15px;">✎</span>
+              <span style="font-size:11px;font-weight:500;">病历</span>
+            </div>
+          </div>
+          <div style="font-size:12px;color:#8e8e93;padding:12px 2px 6px;">异常指标</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="card" style="margin:0;padding:9px 11px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:11px;color:#8e8e93;">肌酐</span><span class="abadge">偏高</span>
+              </div>
+              <div style="font-size:17px;font-weight:700;line-height:1.35;">106 <span style="font-size:9.5px;font-weight:400;color:#8e8e93;">umol/L</span></div>
+            </div>
+            <div class="card" style="margin:0;padding:9px 11px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:11px;color:#8e8e93;">尿素</span><span class="abadge">偏高</span>
+              </div>
+              <div style="font-size:17px;font-weight:700;line-height:1.35;">9.51 <span style="font-size:9.5px;font-weight:400;color:#8e8e93;">mmol/L</span></div>
+            </div>
+            <div class="card" style="margin:0;padding:9px 11px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:11px;color:#8e8e93;">胱抑素C</span><span class="abadge">偏高</span>
+              </div>
+              <div style="font-size:17px;font-weight:700;line-height:1.35;">1.23 <span style="font-size:9.5px;font-weight:400;color:#8e8e93;">mg/L</span></div>
+            </div>
+            <div class="card" style="margin:0;padding:9px 11px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:11px;color:#8e8e93;">24h尿蛋白</span><span class="abadge">偏高</span>
+              </div>
+              <div style="font-size:17px;font-weight:700;line-height:1.35;">392.7 <span style="font-size:9.5px;font-weight:400;color:#8e8e93;">mg/24h</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><div class="ic"></div>摘要</div>
+          <div class="tab"><div class="ic"></div>饮食</div>
+          <div class="tab"><div class="ic"></div>健身</div>
+          <div class="tab on"><div class="ic"></div>疾病</div>
+        </div>
+      </div></div>
+      <div class="figcap">疾病 tab 顶层，三个入口按钮在上，异常指标摘要在下</div>
+    </div>
+    <div class="pts">
+      <h4>结构口径</h4>
+      <li>单页滚动结构，顶部分段控件取消，页面按用户关心度组织而不是按数据类型组织</li>
+      <li>三个独立入口按钮横排置顶：化验指标、影像检查、病历，各带彩色图标，不带数量，入口是稳定结构，永远在首屏</li>
+      <li>下方是异常指标摘要卡网格，规则是每个指标取最新一条记录，带偏高偏低标记的入选，偏高在前，卡片只给指标名、最新值和状态，无异常时显示绿色正常提示</li>
+      <li>页面内导航由 react-router 驱动，tab 与详情页都是路由，返回逐层回退且系统返回手势同样生效，从趋势详情返回停留在来源列表而不是跳回顶层</li>
+      <li>二期 OCR 落地后在入口区增加化验单入口，当前不做占位</li>
+    </div>
+  </div>
+</section>
+
+<section id="sec-browser">
+  <div class="cap">设计段</div>
+  <h2>化验指标目录与钻取</h2>
+  <div class="rowflex">
+    <div class="figure">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>●●● ●●</span></div>
+        <div class="appbar"><div class="crumb"><b>化验指标</b></div></div>
+        <div class="content">
+          <div style="background:#f2f2f7;border-radius:8px;height:30px;display:flex;align-items:center;padding:0 10px;font-size:11.5px;color:#8e8e93;margin-bottom:12px;">搜索指标</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+            <div class="card" style="margin:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:5px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:rgba(14,165,233,.12);color:#0284c7;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;">化</span>
+              <span style="font-size:11px;font-weight:500;">生化检查</span>
+            </div>
+            <div class="card" style="margin:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:5px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:rgba(245,158,11,.14);color:#b45309;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;">尿</span>
+              <span style="font-size:11px;font-weight:500;">尿液检查</span>
+            </div>
+            <div class="card" style="margin:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:5px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:rgba(244,63,94,.12);color:#be123c;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;">血</span>
+              <span style="font-size:11px;font-weight:500;">血液常规</span>
+            </div>
+            <div class="card" style="margin:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:5px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:rgba(139,92,246,.12);color:#6d28d9;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;">免</span>
+              <span style="font-size:11px;font-weight:500;">免疫检查</span>
+            </div>
+            <div class="card" style="margin:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:5px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:rgba(16,185,129,.12);color:#047857;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;">内</span>
+              <span style="font-size:11px;font-weight:500;">内分泌检查</span>
+            </div>
+            <div class="card" style="margin:0;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:5px;">
+              <span style="width:30px;height:30px;border-radius:8px;background:rgba(100,116,139,.12);color:#475569;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;">他</span>
+              <span style="font-size:11px;font-weight:500;">其他检查</span>
+            </div>
+          </div>
+          <div class="notegray" style="background:#fff;margin-top:10px;">输入关键字后切成跨分类的匹配列表，清空回到分类方块。</div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><div class="ic"></div>摘要</div>
+          <div class="tab"><div class="ic"></div>饮食</div>
+          <div class="tab"><div class="ic"></div>健身</div>
+          <div class="tab on"><div class="ic"></div>疾病</div>
+        </div>
+      </div></div>
+      <div class="figcap">化验指标二级页，分类方块加跨分类搜索</div>
+    </div>
+    <div class="pts">
+      <h4>钻取规则</h4>
+      <li>化验指标入口进二级页，默认是分类方块网格，六大类各一块图标加分类名，未知分类兜底灰块排在末尾</li>
+      <li>点分类进三级页，列出该类全部指标，每行给最新值、偏高偏低标记、历史记录次数与最近日期，点行进趋势详情</li>
+      <li>顶部搜索框跨分类搜指标名，输入时切成按分类分组的匹配列表，清空回到分类方块</li>
+      <li>影像检查与病历是同级二级页，影像按日期倒序列结论，病历按日期倒序带编辑与写病历入口，正文按 Markdown 渲染</li>
+      <li>口语叫法经字典归一到标准名，血肌酐、Scr、肌酐落在同一条趋势线上</li>
+    </div>
+  </div>
+</section>
+
+<section id="sec-trend">
+  <div class="cap">设计段</div>
+  <h2>趋势图与异常标注</h2>
+  <div class="rowflex">
+    <div class="chartbox" style="flex:1;min-width:340px;">
+      <h3>肌酐 · 有上下限的指标</h3>
+      <div class="sub">umol/L · 参考范围 57 至 97 · 2020-10 至 2026-09 抽样</div>
+      <svg viewBox="0 0 280 168">
+        <rect x="16" y="82" width="252" height="68" fill="#14b8a6" opacity="0.08"/>
+        <line x1="16" y1="82" x2="268" y2="82" stroke="#ef4444" stroke-dasharray="5 4" opacity="0.5"/>
+        <text x="268" y="78" text-anchor="end" font-size="8" fill="#ef4444">上限 97</text>
+        <text x="0" y="112" font-size="7" fill="#b6b6bc">90</text>
+        <text x="0" y="72" font-size="7" fill="#b6b6bc">100</text>
+        <text x="0" y="32" font-size="7" fill="#b6b6bc">110</text>
+        <polyline fill="none" stroke="#7c8aa0" stroke-width="1.5"
+          points="24,34 43.7,126 63.3,54 83,102 102.7,69 122.3,98 142,14 161.7,30 181.3,70 201,58 220.7,30 240.3,42 260,46"/>
+        <circle cx="43.7" cy="126" r="3" fill="#14b8a6"/>
+        <circle cx="83" cy="102" r="3" fill="#14b8a6"/>
+        <circle cx="122.3" cy="98" r="3" fill="#14b8a6"/>
+        <circle cx="24" cy="34" r="3.5" fill="#ef4444"/>
+        <circle cx="63.3" cy="54" r="3.5" fill="#ef4444"/>
+        <circle cx="102.7" cy="69" r="3.5" fill="#ef4444"/>
+        <circle cx="142" cy="14" r="3.5" fill="#ef4444"/>
+        <circle cx="161.7" cy="30" r="3.5" fill="#ef4444"/>
+        <circle cx="181.3" cy="70" r="3.5" fill="#ef4444"/>
+        <circle cx="201" cy="58" r="3.5" fill="#ef4444"/>
+        <circle cx="220.7" cy="30" r="3.5" fill="#ef4444"/>
+        <circle cx="240.3" cy="42" r="3.5" fill="#ef4444"/>
+        <circle cx="260" cy="46" r="3.5" fill="#ef4444"/>
+        <text x="16" y="26" font-size="8.5" fill="#b91c1c">109</text>
+        <text x="142" y="8" font-size="8.5" fill="#b91c1c" text-anchor="middle">114</text>
+        <text x="220.7" y="22" font-size="8.5" fill="#b91c1c" text-anchor="middle">110</text>
+        <text x="262" y="40" font-size="8.5" fill="#b91c1c" text-anchor="end">106</text>
+        <text x="16" y="164" font-size="8" fill="#8e8e93">2020-10</text>
+        <text x="63.3" y="164" font-size="8" fill="#8e8e93" text-anchor="middle">2021</text>
+        <text x="102.7" y="164" font-size="8" fill="#8e8e93" text-anchor="middle">2022</text>
+        <text x="142" y="164" font-size="8" fill="#8e8e93" text-anchor="middle">2025</text>
+        <text x="268" y="164" font-size="8" fill="#8e8e93" text-anchor="end">2026-09</text>
+      </svg>
+      <div class="legend">
+        <span class="lg"><span class="sw" style="background:#ef4444;"></span>超上限点并标数值</span>
+        <span class="lg"><span class="sw" style="background:#14b8a6;"></span>范围内点</span>
+        <span class="lg"><span class="sw" style="background:#14b8a6;opacity:.25;width:14px;border-radius:3px;"></span>参考范围带</span>
+        <span class="lg"><span class="sw" style="background:transparent;border-top:2px dashed #ef4444;border-radius:0;height:0;"></span>上限虚线</span>
+      </div>
+    </div>
+    <div class="chartbox" style="flex:1;min-width:340px;">
+      <h3>24 小时尿蛋白 · 只有上限的指标</h3>
+      <div class="sub">mg/24h · 上限 150 · 全程超限</div>
+      <svg viewBox="0 0 280 168">
+        <rect x="16" y="136" width="252" height="14" fill="#14b8a6" opacity="0.08"/>
+        <line x1="16" y1="136" x2="268" y2="136" stroke="#ef4444" stroke-dasharray="5 4" opacity="0.5"/>
+        <text x="268" y="132" text-anchor="end" font-size="8" fill="#ef4444">上限 150</text>
+        <polyline fill="none" stroke="#7c8aa0" stroke-width="1.5"
+          points="24,63 63.3,85 102.7,88 142,98 181.3,19 220.7,83 260,39"/>
+        <circle cx="24" cy="63" r="3.5" fill="#ef4444"/>
+        <circle cx="63.3" cy="85" r="3.5" fill="#ef4444"/>
+        <circle cx="102.7" cy="88" r="3.5" fill="#ef4444"/>
+        <circle cx="142" cy="98" r="3.5" fill="#ef4444"/>
+        <circle cx="181.3" cy="19" r="3.5" fill="#ef4444"/>
+        <circle cx="220.7" cy="83" r="3.5" fill="#ef4444"/>
+        <circle cx="260" cy="39" r="3.5" fill="#ef4444"/>
+        <text x="16" y="55" font-size="8.5" fill="#b91c1c">931</text>
+        <text x="142" y="13" font-size="8.5" fill="#b91c1c" text-anchor="middle">1403</text>
+        <text x="262" y="33" font-size="8.5" fill="#b91c1c" text-anchor="end">1186</text>
+        <text x="16" y="164" font-size="8" fill="#8e8e93">2021-02</text>
+        <text x="142" y="164" font-size="8" fill="#8e8e93" text-anchor="middle">2021-07</text>
+        <text x="181.3" y="164" font-size="8" fill="#8e8e93" text-anchor="middle">2025-08</text>
+        <text x="268" y="164" font-size="8" fill="#8e8e93" text-anchor="end">2026-04</text>
+      </svg>
+      <div class="legend">
+        <span class="lg"><span class="sw" style="background:#ef4444;"></span>全部超限</span>
+        <span class="lg"><span class="sw" style="background:transparent;border-top:2px dashed #ef4444;border-radius:0;height:0;"></span>单侧阈值线</span>
+      </div>
+    </div>
+    <div class="pts">
+      <h4>图表口径</h4>
+      <li>参考范围画成色带，上下限各自一条虚线，超上限红、低于下限同样红</li>
+      <li>超限点红色实心并标数值，正常点绿色，折线穿过色带时趋势方向一眼可见</li>
+      <li>只有上限的指标画单侧阈值线，下方染参考带</li>
+      <li>数值标签只标首点、峰值与最新点，避免密集期互相压字</li>
+      <li>纵轴范围自动取数据区间加一成余量，不固定从零开始</li>
+    </div>
+  </div>
+</section>
+
+<section id="sec-summary">
+  <div class="cap">设计段</div>
+  <h2>摘要页异常卡</h2>
+  <div class="rowflex">
+    <div class="figure">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>●●● ●●</span></div>
+        <div class="appbar"><div class="t">摘要</div><div class="s">10月22日 星期四</div></div>
+        <div class="content">
+          <div class="card"><div class="ct">最近化验 3 项偏高</div><div class="cs">9月29日 · 肾功能三项持续偏高，尿蛋白 4 月后未复查</div></div>
+          <div class="alertcard">
+            <div class="ct">化验异常 <span style="font-weight:400;font-size:10.5px;color:#b91c1c;">最近 2026-09-29</span></div>
+            <div class="mrow"><span class="nm">肌酐</span><span class="vl up">106 ↑<span class="un">参考 57 至 97</span></span></div>
+            <div class="mrow"><span class="nm">胱抑素C</span><span class="vl up">1.23 ↑<span class="un">参考 0.59 至 1.03</span></span></div>
+            <div class="mrow"><span class="nm">尿素</span><span class="vl up">9.51 ↑<span class="un">参考 3.1 至 8.0</span></span></div>
+          </div>
+          <div class="card">
+            <div class="ct">体征</div>
+            <div class="mrow"><span class="nm">体重</span><span class="vl">72.4 kg</span></div>
+            <div class="mrow"><span class="nm">血压</span><span class="vl ok">118 / 76</span></div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab on"><div class="ic"></div>摘要</div>
+          <div class="tab"><div class="ic"></div>饮食</div>
+          <div class="tab"><div class="ic"></div>健身</div>
+          <div class="tab"><div class="ic"></div>疾病</div>
+        </div>
+      </div></div>
+      <div class="figcap">异常卡置顶，点行跳转对应指标</div>
+    </div>
+    <div class="pts">
+      <h4>摘要页规则</h4>
+      <li>化验有异常标记则异常卡置顶并标异常，这条是架构总览写死的摘要页规则</li>
+      <li>卡片每行取该指标最新一条，行尾带参考范围，不堆历史</li>
+      <li>一句话状态汇总异常数量与最近化验日期，只描述数据不给结论</li>
+      <li>点行跳疾病 tab 对应指标的趋势详情，跨 tab 联动与现有卡片一致</li>
+      <li>无异常时整卡隐藏，摘要页退回体征与饮食健身卡</li>
+    </div>
+  </div>
+</section>
+
+<section id="sec-chat">
+  <div class="cap">设计段</div>
+  <h2>对话录入</h2>
+  <div class="rowflex">
+    <div class="figure">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>●●● ●●</span></div>
+        <div class="appbar"><div class="t">对话</div></div>
+        <div class="content">
+          <div class="chat">
+            <div class="msg-u">9月29号复查的，肌酐106，尿素9.51，尿酸232，胱抑素C 1.23，β2微球蛋白1.66</div>
+            <div class="toolpill"><span class="dot"></span>record_lab_result</div>
+            <div class="msg-a">
+              已录入 5 项，其中 <b class="hi">3 项偏高</b><br>
+              肌酐 106 ↑ 参考 57 至 97<br>
+              胱抑素C 1.23 ↑ 参考 0.59 至 1.03<br>
+              尿素 9.51 ↑ 参考 3.1 至 8.0<br>
+              与 8 月 30 日对比，肌酐 107 到 106 基本持平，尿素 6.38 到 9.51 升高较明显，尿酸持平，β2-微球蛋白为首次记录。
+              <div class="sub">以上为数据对比，具体请以医生意见为准</div>
+            </div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><div class="ic"></div>摘要</div>
+          <div class="tab"><div class="ic"></div>饮食</div>
+          <div class="tab"><div class="ic"></div>健身</div>
+          <div class="tab"><div class="ic"></div>疾病</div>
+        </div>
+      </div></div>
+      <div class="figcap">录入即回对比，异常点名</div>
+    </div>
+    <div class="pts">
+      <h4>对话口径</h4>
+      <li>录入即回对比，本次对上次逐项给变化方向，首次记录的指标单独说明</li>
+      <li>异常点名必须带参考范围，措辞停在数据描述，结尾固定提醒以医生意见为准</li>
+      <li>日期缺失时先追问检查日期再落库，日期是化验记录的主键之一</li>
+      <li>口语名称、缩写、带括号的旧叫法一律由字典归一后入库</li>
+      <li>工具调用在界面呈现为小胶囊，与饮食健身模块的呈现方式一致</li>
+    </div>
+  </div>
+</section>
+
+<section id="sec-journal">
+  <div class="cap">设计段</div>
+  <h2>病历</h2>
+  <div class="rowflex">
+    <div class="figure">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>●●● ●●</span></div>
+        <div class="appbar">
+          <div class="crumb"><b>疾病</b> · 病历</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="t" style="font-size:18px;">健康档案</div>
+            <div style="font-size:12px;color:#0f9488;font-weight:600;">编辑</div>
+          </div>
+        </div>
+        <div class="content">
+          <div class="seg"><div class="sbtn">指标</div><div class="sbtn on">病历</div></div>
+          <div class="card">
+            <div class="ct" style="color:#0f9488;">2026-09-29 · 肾内科复诊</div>
+            <div class="cs" style="line-height:1.6;">指标平稳，肌酐 106，维持现有方案，三个月后复查。尿素偏高，医嘱注意饮水量。</div>
+          </div>
+          <div class="card">
+            <div class="ct" style="color:#0f9488;">2026-04-15 · 24 小时尿蛋白</div>
+            <div class="cs" style="line-height:1.6;">尿蛋白 1186，较 3 月回升，医嘱限盐并加测血压。</div>
+          </div>
+          <div class="card">
+            <div class="ct" style="color:#0f9488;">2021-08 · 肾穿刺</div>
+            <div class="cs" style="line-height:1.6;">行肾穿刺术，病理结果存影像检查档案，术后复查顺利。</div>
+          </div>
+          <div class="cs" style="text-align:center;">每次保存自动留快照 · 改坏可回滚</div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><div class="ic"></div>摘要</div>
+          <div class="tab"><div class="ic"></div>饮食</div>
+          <div class="tab"><div class="ic"></div>健身</div>
+          <div class="tab on"><div class="ic"></div>疾病</div>
+        </div>
+      </div></div>
+      <div class="figcap">markdown 病历，按日期倒序</div>
+    </div>
+    <div class="pts">
+      <h4>病历口径</h4>
+      <li>病历按日期一文件存放在 journal 目录，界面上的卡片与文件一一对应，不用再解析标题拆卡</li>
+      <li>人和 Agent 双向维护，Agent 在对话里听说就诊经过后整理写入对应日期的文件</li>
+      <li>改某天的记录只碰那个文件，误伤半径从整份文档缩到单条，写前快照也按文件留</li>
+      <li>叙述性内容只进病历，影像病理结论走单独的表</li>
+    </div>
+  </div>
+</section>
+
+<section id="sec-empty">
+  <div class="cap">设计段</div>
+  <h2>冷启动空态</h2>
+  <div class="rowflex">
+    <div class="figure">
+      <div class="phone"><div class="screen">
+        <div class="statusbar"><span>9:41</span><span>●●● ●●</span></div>
+        <div class="appbar"><div class="t">疾病</div></div>
+        <div class="content">
+          <div class="seg"><div class="sbtn on">指标</div><div class="sbtn">病历</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding-bottom:40px;">
+            <svg width="54" height="54" viewBox="0 0 54 54">
+              <circle cx="27" cy="27" r="24" fill="#ccfbf1"/>
+              <path d="M27 18 v18 M18 27 h18" stroke="#0f9488" stroke-width="3.5" stroke-linecap="round"/>
+            </svg>
+            <div style="font-size:14px;font-weight:700;">还没有任何化验数据</div>
+            <div class="cs" style="text-align:center;line-height:1.6;">把化验单打开，在对话里照着念就行<br>不需要懂任何指标名</div>
+            <div style="margin-top:6px;background:#fff;border:1px dashed #c4c4ca;color:#8e8e93;border-radius:999px;padding:5px 14px;font-size:11.5px;">拍照识别 · 二期开放</div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><div class="ic"></div>摘要</div>
+          <div class="tab"><div class="ic"></div>饮食</div>
+          <div class="tab"><div class="ic"></div>健身</div>
+          <div class="tab on"><div class="ic"></div>疾病</div>
+        </div>
+      </div></div>
+      <div class="figcap">空态给一条对话主路径</div>
+    </div>
+    <div class="pts">
+      <h4>空态口径</h4>
+      <li>文案只指向一条路，去对话里念化验单，不要求用户认识任何术语</li>
+      <li>拍照识别作为二期入口展示但置灰，明示未来有更省事的方式</li>
+      <li>首次录入完成后空态即消失，摘要页同时出现异常卡或正常态</li>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 原理段 ============ -->
+
+<section id="sec-structure">
+  <div class="cap">原理段</div>
+  <h2>数据结构今昔</h2>
+
+  <div class="chartbox" style="margin-bottom:20px;">
+    <h3>现状 · 旧项目，五类数据全是文件</h3>
+    <div class="sub">读取靠模型拿脚本逐文件解析，写入靠手改，没有统一入口</div>
+    <svg viewBox="0 0 960 400">
+      <defs>
+        <marker id="bA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#3b82f6"/>
+        </marker>
+      </defs>
+      <rect x="20" y="16" width="920" height="240" rx="14" fill="#f8fafc" stroke="#d1d5db"/>
+      <text x="36" y="40" font-size="12" fill="#6b7280">旧项目 refine_data · 全部为文件，没有数据库</text>
+
+      <rect x="40" y="56" width="280" height="180" rx="10" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="56" y="78" font-size="12.5" font-weight="bold" fill="#374151">化验数据 csv_output</text>
+      <text x="56" y="100" font-size="10.5" fill="#4b5563">8 个大类目录 · 约 25 个科目文件</text>
+      <text x="56" y="118" font-size="10.5" fill="#4b5563">约 750 行 · 2020-10 至 2026-09</text>
+      <rect x="56" y="130" width="58" height="20" rx="5" fill="#f3f4f6" stroke="#d1d5db"/><text x="85" y="144" text-anchor="middle" font-size="9.5" fill="#4b5563">生化</text>
+      <rect x="120" y="130" width="58" height="20" rx="5" fill="#f3f4f6" stroke="#d1d5db"/><text x="149" y="144" text-anchor="middle" font-size="9.5" fill="#4b5563">血液</text>
+      <rect x="184" y="130" width="58" height="20" rx="5" fill="#f3f4f6" stroke="#d1d5db"/><text x="213" y="144" text-anchor="middle" font-size="9.5" fill="#4b5563">尿液</text>
+      <rect x="248" y="130" width="58" height="20" rx="5" fill="#f3f4f6" stroke="#d1d5db"/><text x="277" y="144" text-anchor="middle" font-size="9.5" fill="#4b5563">免疫</text>
+      <rect x="56" y="156" width="58" height="20" rx="5" fill="#f3f4f6" stroke="#d1d5db"/><text x="85" y="170" text-anchor="middle" font-size="9.5" fill="#4b5563">内分泌</text>
+      <rect x="120" y="156" width="58" height="20" rx="5" fill="#f3f4f6" stroke="#d1d5db"/><text x="149" y="170" text-anchor="middle" font-size="9.5" fill="#4b5563">影像</text>
+      <rect x="184" y="156" width="58" height="20" rx="5" fill="#f3f4f6" stroke="#d1d5db"/><text x="213" y="170" text-anchor="middle" font-size="9.5" fill="#4b5563">其他</text>
+      <rect x="248" y="156" width="58" height="20" rx="5" fill="#f3f4f6" stroke="#d1d5db"/><text x="277" y="170" text-anchor="middle" font-size="9.5" fill="#4b5563">字典</text>
+      <text x="56" y="192" font-size="9.5" fill="#6b7280">科目文件 exam_*.csv 十三列同构</text>
+      <text x="56" y="210" font-size="9.5" fill="#6b7280">影像病理定性结论也混在科目文件里</text>
+
+      <rect x="340" y="56" width="270" height="180" rx="10" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="356" y="78" font-size="12.5" font-weight="bold" fill="#374151">字典与规则</text>
+      <text x="356" y="102" font-size="10" font-family="Menlo,monospace" fill="#374151">dict_analyte_dict.csv</text>
+      <text x="356" y="117" font-size="9.5" fill="#6b7280">指标标准名 · 别名 · 默认单位</text>
+      <text x="356" y="137" font-size="10" font-family="Menlo,monospace" fill="#374151">dict_reference_ranges.csv</text>
+      <text x="356" y="152" font-size="9.5" fill="#6b7280">参考范围字典</text>
+      <text x="356" y="172" font-size="10" font-family="Menlo,monospace" fill="#374151">validation_rules.yaml</text>
+      <text x="356" y="187" font-size="9.5" fill="#6b7280">数值上限校验规则</text>
+      <text x="356" y="207" font-size="10" font-family="Menlo,monospace" fill="#374151">medical_exam_schema.md</text>
+      <text x="356" y="222" font-size="9.5" fill="#6b7280">格式约定文档</text>
+
+      <rect x="630" y="56" width="290" height="180" rx="10" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="646" y="78" font-size="12.5" font-weight="bold" fill="#374151">叙述与日常</text>
+      <text x="646" y="102" font-size="10" font-family="Menlo,monospace" fill="#374151">health_journal.md</text>
+      <text x="646" y="117" font-size="9.5" fill="#6b7280">病历叙述 · 人机共写</text>
+      <text x="646" y="137" font-size="10" font-family="Menlo,monospace" fill="#374151">daily_metrics.csv</text>
+      <text x="646" y="152" font-size="9.5" fill="#6b7280">体重与血压日常记录</text>
+      <text x="646" y="172" font-size="10" font-family="Menlo,monospace" fill="#374151">docs 指南 PDF 与 MD</text>
+      <text x="646" y="187" font-size="9.5" fill="#6b7280">临床指南参考资料</text>
+      <text x="646" y="207" font-size="10" font-family="Menlo,monospace" fill="#374151">scripts ocr 与管理脚本</text>
+      <text x="646" y="222" font-size="9.5" fill="#6b7280">工具不承载数据</text>
+
+      <rect x="20" y="268" width="920" height="44" rx="10" fill="#f3f4f6" stroke="#d1d5db"/>
+      <text x="36" y="295" font-size="11" font-weight="bold" fill="#374151">13 列固定表头</text>
+      <text x="110" y="295" font-size="10" font-family="Menlo,monospace" fill="#4b5563">result_id · date · specimen · category · analyte · value_num · value_text · unit · ref_low · ref_high · ref_text · abnormal_flag · note</text>
+
+      <rect x="24" y="330" width="110" height="36" rx="9" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="79" y="352" text-anchor="middle" font-size="12" fill="#1e40af">LLM Agent</text>
+      <path d="M134,348 H166" stroke="#3b82f6" stroke-width="1.6" fill="none" marker-end="url(#bA)"/>
+      <rect x="170" y="330" width="150" height="36" rx="9" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="245" y="352" text-anchor="middle" font-size="11" font-family="Menlo,monospace" fill="#1e40af">csv_manager.py</text>
+      <path d="M320,348 H352" stroke="#3b82f6" stroke-width="1.6" fill="none" marker-end="url(#bA)"/>
+      <rect x="356" y="330" width="150" height="36" rx="9" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="431" y="352" text-anchor="middle" font-size="12" fill="#1e40af">逐文件解析</text>
+
+      <rect x="540" y="326" width="190" height="30" rx="8" fill="#fee2e2" stroke="#fca5a5"/>
+      <text x="635" y="345" text-anchor="middle" font-size="10.5" fill="#b91c1c">同一指标多种叫法</text>
+      <rect x="540" y="362" width="190" height="30" rx="8" fill="#fee2e2" stroke="#fca5a5"/>
+      <text x="635" y="381" text-anchor="middle" font-size="10.5" fill="#b91c1c">标记列混用 HIGH 与注释</text>
+      <rect x="748" y="326" width="192" height="30" rx="8" fill="#fee2e2" stroke="#fca5a5"/>
+      <text x="844" y="345" text-anchor="middle" font-size="10.5" fill="#b91c1c">写入无统一校验</text>
+      <rect x="748" y="362" width="192" height="30" rx="8" fill="#fee2e2" stroke="#fca5a5"/>
+      <text x="844" y="381" text-anchor="middle" font-size="10.5" fill="#b91c1c">散文件不利备份</text>
+    </svg>
+  </div>
+
+  <div class="chartbox" style="margin-bottom:16px;">
+    <h3>未来 · App 落地后的三层归宿</h3>
+    <div class="sub">字典规则随包发布，个人数据进库，原始件冻结冷备，读写只走工具</div>
+    <svg viewBox="0 0 960 470">
+      <defs>
+        <marker id="gB" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#16a34a"/>
+        </marker>
+      </defs>
+
+      <rect x="20" y="60" width="150" height="44" rx="10" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="95" y="78" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">科目 CSV ×25</text>
+      <text x="95" y="94" text-anchor="middle" font-size="9" fill="#60a5fa">化验与影像病理 · 约 750 行</text>
+      <rect x="20" y="170" width="150" height="44" rx="10" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="95" y="188" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">字典与规则 ×3</text>
+      <text x="95" y="204" text-anchor="middle" font-size="9" fill="#60a5fa">别名 · 范围 · 校验</text>
+      <rect x="20" y="280" width="150" height="44" rx="10" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="95" y="298" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">journal 与 daily</text>
+      <text x="95" y="314" text-anchor="middle" font-size="9" fill="#60a5fa">病历 · 血压体重</text>
+
+      <rect x="220" y="52" width="200" height="64" rx="10" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="320" y="74" text-anchor="middle" font-size="12" font-weight="bold" fill="#374151">一次性导入脚本</text>
+      <text x="320" y="92" text-anchor="middle" font-size="9.5" fill="#6b7280">行数核对 · 极值抽查</text>
+      <text x="320" y="106" text-anchor="middle" font-size="9.5" fill="#6b7280">别名归一 · 重算标记</text>
+
+      <path d="M170,82 H216" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gB)"/>
+      <path d="M170,192 C320,192 340,63 474,63" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gB)"/>
+      <text x="330" y="150" text-anchor="middle" font-size="9.5" fill="#6b7280">整理为包内资产</text>
+      <path d="M170,302 C330,302 360,282 494,282" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gB)"/>
+      <text x="330" y="322" text-anchor="middle" font-size="9.5" fill="#6b7280">按日期拆分迁入</text>
+      <path d="M420,74 C470,74 470,150 540,146" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gB)"/>
+      <path d="M420,104 C470,140 780,120 866,146" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gB)"/>
+      <text x="640" y="128" text-anchor="middle" font-size="9.5" fill="#6b7280">并入体征</text>
+
+      <rect x="480" y="20" width="460" height="88" rx="12" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="496" y="42" font-size="12" font-weight="bold" fill="#374151">包内资产 · 随 App 发布</text>
+      <text x="496" y="58" font-size="9.5" fill="#6b7280">src 内版本化 · 所有用户共享 · 不含个人数据</text>
+      <rect x="496" y="68" width="130" height="24" rx="6" fill="#f3f4f6" stroke="#d1d5db"/><text x="561" y="84" text-anchor="middle" font-size="10" fill="#4b5563">指标字典含别名</text>
+      <rect x="636" y="68" width="130" height="24" rx="6" fill="#f3f4f6" stroke="#d1d5db"/><text x="701" y="84" text-anchor="middle" font-size="10" fill="#4b5563">参考范围字典</text>
+      <rect x="776" y="68" width="130" height="24" rx="6" fill="#f3f4f6" stroke="#d1d5db"/><text x="841" y="84" text-anchor="middle" font-size="10" fill="#4b5563">校验规则</text>
+
+      <rect x="480" y="120" width="460" height="250" rx="12" fill="#f8fafc" stroke="#d1d5db"/>
+      <text x="496" y="142" font-size="12" font-weight="bold" fill="#374151">data 目录 · 本机私有</text>
+      <text x="924" y="142" text-anchor="end" font-size="9.5" fill="#6b7280">gitignore · 发布剥离</text>
+      <rect x="500" y="150" width="434" height="110" rx="10" fill="#e5e7eb" stroke="#6b7280" stroke-width="1.5"/>
+      <text x="690" y="170" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#374151">SQLite · health.db</text>
+      <rect x="832" y="157" width="92" height="20" rx="6" fill="#dcfce7" stroke="#86efac"/><text x="878" y="171" text-anchor="middle" font-size="9" fill="#15803d" font-weight="bold">唯一持续更新</text>
+      <rect x="514" y="182" width="176" height="50" rx="8" fill="#f3f4f6" stroke="#d1d5db"/>
+      <text x="602" y="202" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#374151">lab_results</text>
+      <text x="602" y="219" text-anchor="middle" font-size="9" fill="#6b7280">化验长表 · 新增</text>
+      <rect x="698" y="182" width="118" height="50" rx="8" fill="#f3f4f6" stroke="#d1d5db"/>
+      <text x="757" y="202" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#374151">影像病理表</text>
+      <text x="757" y="219" text-anchor="middle" font-size="9" fill="#6b7280">文字与图片 · 新增</text>
+      <rect x="824" y="182" width="100" height="50" rx="8" fill="#f3f4f6" stroke="#d1d5db"/>
+      <text x="874" y="202" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#374151">daily_metrics</text>
+      <text x="874" y="219" text-anchor="middle" font-size="9" fill="#6b7280">既有 · 体征</text>
+      <text x="717" y="249" text-anchor="middle" font-size="9.5" fill="#6b7280">标准指标名 · 异常标记一律工具判定 · 记录级单位与范围</text>
+      <rect x="500" y="268" width="420" height="40" rx="10" fill="#f3f4f6" stroke="#d1d5db"/>
+      <text x="710" y="286" text-anchor="middle" font-size="11" font-weight="bold" fill="#374151">data/journal/ 按日期一文件 · 快照目录</text>
+      <text x="710" y="301" text-anchor="middle" font-size="9.5" fill="#6b7280">病历与快照 · 人机共写 · 误伤半径缩到单条</text>
+      <rect x="500" y="318" width="420" height="40" rx="10" fill="#f3f4f6" stroke="#d1d5db"/>
+      <text x="710" y="336" text-anchor="middle" font-size="11" font-weight="bold" fill="#374151">data/seed/ 原始 CSV 冷备</text>
+      <text x="710" y="351" text-anchor="middle" font-size="9.5" fill="#6b7280">导入后冻结 · 不再更新</text>
+
+      <rect x="480" y="392" width="460" height="58" rx="12" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="710" y="414" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e40af">录入与查询工具 · WebSocket 快照</text>
+      <text x="710" y="432" text-anchor="middle" font-size="10" fill="#1e40af">指标浏览器 · 摘要异常卡 · 对话查询</text>
+      <path d="M650,260 V388" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gB)"/>
+
+      <text x="24" y="446" font-size="10.5" fill="#b91c1c">文件只作冷备与叙述件，所有读写经工具与数据库，无一方直接解析文件</text>
+    </svg>
+  </div>
+
+  <div class="pts">
+    <h4>现状要点</h4>
+    <li>五类东西全部是文件，化验科目 CSV、两张字典、校验规则、病历叙述、日常体重血压，没有数据库</li>
+    <li>化验约 25 个科目文件分在八个大类目录，单表十三列约 750 行，跨度 2020 至 2026</li>
+    <li>读取靠模型拿脚本逐文件解析，写入靠手改，没有统一入口，也没有校验</li>
+    <li>同一指标多种叫法与标记列混用，是导库前必须归一的两件事</li>
+    <h4>未来要点</h4>
+    <li>三层归宿，包内资产随 App 发布，化验与影像病理进 SQLite，影像病理单独成表，原始件冷备，病历按日期一文件留在文件里</li>
+    <li>唯一持续更新的是 health.db，字典随版本走，seed 冻结不再动</li>
+    <li>消费方只碰工具与库，没有任何一方直接解析文件</li>
+    <li>个人数据全部落在 data 目录，gitignore 且被发布剥离，不出本机</li>
+  </div>
+</section>
+
+<section id="sec-flow">
+  <div class="cap">原理段</div>
+  <h2>数据流</h2>
+  <div class="dg">
+    <svg viewBox="0 0 960 300">
+      <defs>
+        <marker id="gA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#16a34a"/>
+        </marker>
+        <marker id="rA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="#ef4444"/>
+        </marker>
+      </defs>
+      <!-- 输入 -->
+      <rect x="20" y="44" width="150" height="44" rx="10" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="95" y="66" text-anchor="middle" font-size="13" fill="#1e40af">对话口述</text>
+      <rect x="20" y="196" width="150" height="44" rx="10" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="95" y="212" text-anchor="middle" font-size="13" fill="#1e40af">存量 CSV 导入</text>
+      <text x="95" y="228" text-anchor="middle" font-size="9" fill="#60a5fa">一次性脚本</text>
+      <!-- App 组 -->
+      <rect x="214" y="16" width="470" height="268" rx="14" fill="#f8fafc" stroke="#d1d5db"/>
+      <text x="234" y="40" font-size="11" fill="#6b7280">疾病模块 App</text>
+      <rect x="244" y="56" width="170" height="44" rx="10" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="329" y="82" text-anchor="middle" font-size="12.5" fill="#374151" font-family="Menlo,monospace">record_lab_result</text>
+      <rect x="244" y="136" width="120" height="34" rx="8" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="304" y="157" text-anchor="middle" font-size="11.5" fill="#374151">别名归一</text>
+      <rect x="388" y="136" width="110" height="34" rx="8" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="443" y="157" text-anchor="middle" font-size="11.5" fill="#374151">硬校验</text>
+      <rect x="522" y="136" width="120" height="34" rx="8" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="582" y="157" text-anchor="middle" font-size="11.5" fill="#374151">标记判定</text>
+      <rect x="470" y="214" width="180" height="46" rx="10" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="560" y="234" text-anchor="middle" font-size="12" fill="#374151" font-family="Menlo,monospace">SQLite</text>
+      <text x="560" y="250" text-anchor="middle" font-size="10" fill="#6b7280" font-family="Menlo,monospace">lab_results</text>
+      <!-- 拦截 -->
+      <rect x="244" y="214" width="150" height="44" rx="10" fill="#fee2e2" stroke="#fca5a5"/>
+      <text x="319" y="240" text-anchor="middle" font-size="12" fill="#b91c1c">拒绝并提示修改</text>
+      <!-- 输出 -->
+      <rect x="736" y="28" width="190" height="44" rx="10" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="831" y="54" text-anchor="middle" font-size="13" fill="#1e40af">指标浏览器</text>
+      <rect x="736" y="112" width="190" height="44" rx="10" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="831" y="138" text-anchor="middle" font-size="13" fill="#1e40af">摘要异常卡</text>
+      <rect x="736" y="196" width="190" height="44" rx="10" fill="#dbeafe" stroke="#93c5fd"/>
+      <text x="831" y="222" text-anchor="middle" font-size="13" fill="#1e40af">对话查询</text>
+      <!-- 绿色主链路 -->
+      <path d="M170,66 H236" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gA)"/>
+      <path d="M170,218 H206 V78 H236" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gA)"/>
+      <path d="M329,100 V130" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gA)"/>
+      <path d="M364,153 H384" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gA)"/>
+      <path d="M498,153 H518" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gA)"/>
+      <path d="M582,170 V210" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gA)"/>
+      <path d="M650,224 C700,224 700,50 734,50" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gA)"/>
+      <path d="M650,230 C700,230 700,134 734,134" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gA)"/>
+      <path d="M650,237 L734,218" stroke="#16a34a" stroke-width="1.6" fill="none" marker-end="url(#gA)"/>
+      <!-- 红色拦截 -->
+      <path d="M443,170 V236 H398" stroke="#ef4444" stroke-width="1.6" fill="none" marker-end="url(#rA)"/>
+      <text x="450" y="205" font-size="9" fill="#ef4444">数值离谱</text>
+    </svg>
+    <div class="legend">
+      <span class="lg"><span class="sw" style="background:#3b82f6;"></span>外部入口与出口</span>
+      <span class="lg"><span class="sw" style="background:#9ca3af;"></span>App 内部组件</span>
+      <span class="lg"><span class="sw" style="background:#16a34a;"></span>正常链路</span>
+      <span class="lg"><span class="sw" style="background:#ef4444;"></span>校验拦截</span>
+    </div>
+  </div>
+  <div class="pts" style="margin-top:14px;">
+    <li>全部写入走 record_lab_result 一个口，先归一名称、再校验数值，异常标记一律由工具按参考范围判定落库，化验单自带的高低标记不作依据</li>
+    <li>影像病理结论走单独的表，不进 lab_results，导入与查询同口径</li>
+    <li>全部读取走查询工具与快照，界面、摘要卡、对话三方拿到同一份数据</li>
+    <li>离谱数值在校验层被红路拦下，返回修改提示，不进库</li>
+    <li>没有任何一方直接解析文件，这是读取正规化的全部含义</li>
+  </div>
+</section>
+
+<section id="sec-tools">
+  <div class="cap">原理段</div>
+  <h2>MCP 工具盘点</h2>
+  <div class="dg">
+    <svg viewBox="0 0 960 632">
+      <!-- 已实现 -->
+      <rect x="20" y="16" width="920" height="300" rx="14" fill="#f8fafc" stroke="#d1d5db"/>
+      <rect x="36" y="26" width="46" height="20" rx="6" fill="#dcfce7" stroke="#86efac"/>
+      <text x="59" y="40" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">已实现</text>
+      <text x="92" y="40" font-size="12" font-weight="bold" fill="#374151">三个模块共 14 个工具，增删查改口径已在健身与饮食落地</text>
+
+      <rect x="36" y="56" width="288" height="252" rx="10" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="52" y="78" font-size="12" font-weight="bold" fill="#374151">体征模块 · 2 个</text>
+      <rect x="50" y="92" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="62" y="108" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">get_body_metrics</tspan><tspan font-size="9" fill="#6b7280"> 查体征</tspan></text>
+      <rect x="50" y="124" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="62" y="140" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">update_body_metrics</tspan><tspan font-size="9" fill="#6b7280"> 记录体征</tspan></text>
+
+      <rect x="336" y="56" width="288" height="252" rx="10" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="352" y="78" font-size="12" font-weight="bold" fill="#374151">健身模块 · 6 个</text>
+      <rect x="350" y="92" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="362" y="108" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">record_strength</tspan><tspan font-size="9" fill="#6b7280"> 记录力量</tspan></text>
+      <rect x="350" y="124" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="362" y="140" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">record_workout</tspan><tspan font-size="9" fill="#6b7280"> 记录训练</tspan></text>
+      <rect x="350" y="156" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="362" y="172" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">update_workout</tspan><tspan font-size="9" fill="#6b7280"> 改训练</tspan></text>
+      <rect x="350" y="188" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="362" y="204" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">delete_workout</tspan><tspan font-size="9" fill="#6b7280"> 删训练</tspan></text>
+      <rect x="350" y="220" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="362" y="236" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">get_strength_history</tspan><tspan font-size="9" fill="#6b7280"> 查力量历史</tspan></text>
+      <rect x="350" y="252" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="362" y="268" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">get_workout_diary</tspan><tspan font-size="9" fill="#6b7280"> 查训练日记</tspan></text>
+
+      <rect x="636" y="56" width="288" height="252" rx="10" fill="#e5e7eb" stroke="#9ca3af"/>
+      <text x="652" y="78" font-size="12" font-weight="bold" fill="#374151">饮食模块 · 6 个</text>
+      <rect x="650" y="92" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="662" y="108" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">record_diet</tspan><tspan font-size="9" fill="#6b7280"> 记录饮食</tspan></text>
+      <rect x="650" y="124" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="662" y="140" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">get_diet_log</tspan><tspan font-size="9" fill="#6b7280"> 查饮食日志</tspan></text>
+      <rect x="650" y="156" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="662" y="172" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">update_diet</tspan><tspan font-size="9" fill="#6b7280"> 改饮食</tspan></text>
+      <rect x="650" y="188" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="662" y="204" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">delete_diet</tspan><tspan font-size="9" fill="#6b7280"> 删饮食</tspan></text>
+      <rect x="650" y="220" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="662" y="236" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">set_diet_goals</tspan><tspan font-size="9" fill="#6b7280"> 设饮食目标</tspan></text>
+      <rect x="650" y="252" width="260" height="24" rx="6" fill="#f9fafb" stroke="#d1d5db"/>
+      <text x="662" y="268" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">get_diet_goals</tspan><tspan font-size="9" fill="#6b7280"> 查饮食目标</tspan></text>
+
+      <!-- 本批建议 -->
+      <rect x="20" y="336" width="920" height="232" rx="14" fill="#fef7f7" stroke="#fca5a5" stroke-dasharray="6 4"/>
+      <rect x="36" y="346" width="52" height="20" rx="6" fill="#fee2e2" stroke="#fca5a5"/>
+      <text x="62" y="360" text-anchor="middle" font-size="10" font-weight="bold" fill="#b91c1c">待拍板</text>
+      <text x="98" y="360" font-size="12" font-weight="bold" fill="#374151">疾病模块本批建议 9 个，化验 5 · 影像病理 2 · 病历 2</text>
+
+      <rect x="36" y="376" width="400" height="188" rx="10" fill="#ffffff" stroke="#fecaca"/>
+      <text x="52" y="398" font-size="12" font-weight="bold" fill="#374151">化验 · 5 个</text>
+      <rect x="50" y="414" width="372" height="22" rx="6" fill="#fff" stroke="#fca5a5"/>
+      <text x="62" y="429" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">record_lab_result</tspan><tspan font-size="9" fill="#6b7280"> 批量录一次化验</tspan></text>
+      <rect x="50" y="442" width="372" height="22" rx="6" fill="#fff" stroke="#fca5a5"/>
+      <text x="62" y="457" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">get_lab_history</tspan><tspan font-size="9" fill="#6b7280"> 查指标历史</tspan></text>
+      <rect x="50" y="470" width="372" height="22" rx="6" fill="#fff" stroke="#fca5a5"/>
+      <text x="62" y="485" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">list_lab_analytes</tspan><tspan font-size="9" fill="#6b7280"> 列科目与指标</tspan></text>
+      <rect x="50" y="498" width="372" height="22" rx="6" fill="#fff" stroke="#fca5a5"/>
+      <text x="62" y="513" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">update_lab_result</tspan><tspan font-size="9" fill="#6b7280"> 按编号改一条</tspan></text>
+      <rect x="50" y="526" width="372" height="22" rx="6" fill="#fff" stroke="#fca5a5"/>
+      <text x="62" y="541" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">delete_lab_result</tspan><tspan font-size="9" fill="#6b7280"> 按编号删一条</tspan></text>
+
+      <rect x="452" y="376" width="230" height="188" rx="10" fill="#ffffff" stroke="#fecaca"/>
+      <text x="468" y="398" font-size="12" font-weight="bold" fill="#374151">影像病理 · 2 个</text>
+      <rect x="466" y="414" width="202" height="22" rx="6" fill="#fff" stroke="#fca5a5"/>
+      <text x="478" y="429" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">record_imaging_finding</tspan><tspan font-size="9" fill="#6b7280"> 录病理结论</tspan></text>
+      <rect x="466" y="442" width="202" height="22" rx="6" fill="#fff" stroke="#fca5a5"/>
+      <text x="478" y="457" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">get_imaging_history</tspan><tspan font-size="9" fill="#6b7280"> 查病理结论</tspan></text>
+
+      <rect x="698" y="376" width="226" height="188" rx="10" fill="#ffffff" stroke="#fecaca"/>
+      <text x="714" y="398" font-size="12" font-weight="bold" fill="#374151">病历 · 2 个</text>
+      <rect x="712" y="414" width="198" height="22" rx="6" fill="#fff" stroke="#fca5a5"/>
+      <text x="724" y="429" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">get_health_journal</tspan><tspan font-size="9" fill="#6b7280"> 读病历</tspan></text>
+      <rect x="712" y="442" width="198" height="22" rx="6" fill="#fff" stroke="#fca5a5"/>
+      <text x="724" y="457" fill="#374151"><tspan font-family="Menlo,monospace" font-size="9.5">update_health_journal</tspan><tspan font-size="9" fill="#6b7280"> 写病历</tspan></text>
+
+      <rect x="20" y="588" width="920" height="36" rx="10" fill="#f3f4f6" stroke="#d1d5db"/>
+      <text x="480" y="611" text-anchor="middle" font-size="11.5" fill="#374151">现有 14 个已实现 · 本批建议新增 9 个 · 采纳后全 App 共 23 个工具</text>
+    </svg>
+  </div>
+  <div class="pts" style="margin-top:14px;">
+    <h4>现状口径</h4>
+    <li>已实现的 14 个工具按模块聚合，体征 2、健身 6、饮食 6，查询返回带编号，Agent 拿到就能改能删</li>
+    <li>健身与饮食两摊已经验证了增删查改的完整闭环，疾病照这个口径延续</li>
+    <h4>本批建议的切法</h4>
+    <li>化验 5 个，录入与查询之外保留按编号改与按编号删，念错一个数不用整次重录</li>
+    <li>影像病理 2 个，结论是成段文字与日期，和化验的数值结构差异大，分开立工具更清楚</li>
+    <li>病历 2 个读写，写前自动快照</li>
+    <li>精简的替代切法存在，砍掉化验的改与删两个，或者影像病理不单独立工具并进化验的录入查询带类型参数，代价是 Agent 提示词里的分支变多</li>
+  </div>
+</section>
+
+<section id="sec-storage">
+  <div class="cap">原理段</div>
+  <h2>存储分层</h2>
+  <div class="store blue">
+    <h4>包内资产 · 字典与校验规则</h4>
+    <p>指标字典含别名、参考范围字典、数值校验规则。属于通用知识而非个人数据，随 App 版本更新，所有用户共享。</p>
+  </div>
+  <div class="store gray">
+    <h4>data/health.db · 唯一持续更新的数据源</h4>
+    <p>lab_results 长表承载全部化验记录，十三个字段沿用存量 CSV 已验证五年的结构。参考范围与单位在记录级保存，字典只兜底。单文件易备份，需要时随时导出 CSV 或 JSON。</p>
+  </div>
+  <div class="store gray">
+    <h4>data/seed 与 markdown · 冷备与叙述件</h4>
+    <p>原始 CSV 导入后冻结为冷备。病历按日期一文件放 journal 目录，快照按文件留版本。三者均 gitignore 且被发布剥离，个人医疗数据不出本机。</p>
+  </div>
+  <div class="pts" style="margin-top:14px;">
+    <li>表格文件不再作为活数据，只当导入源与导出格式</li>
+    <li>持续更新的只有数据库一份，避免两处双写出现分叉</li>
+  </div>
+</section>
+
+<section id="sec-import">
+  <div class="cap">原理段</div>
+  <h2>存量导入</h2>
+  <div class="steps">
+    <div class="step">拷贝 CSV 至 data/seed</div><div class="arrow">→</div>
+    <div class="step">脚本核对行数与极值</div><div class="arrow">→</div>
+    <div class="step">写入 lab_results</div><div class="arrow">→</div>
+    <div class="step">源文件冻结为冷备</div>
+  </div>
+  <div class="pts" style="margin-top:14px;">
+    <li>导入是首个用户的私人引导，脚本放开发目录，不进产品功能面，新用户拿到的 App 是空的</li>
+    <li>abnormal_flag 实际数据里有 HIGH 与中文注释混用，导入时归一为固定枚举</li>
+    <li>影像病理三件 CSV 导入单独的影像病理表，表结构预留图片引用字段，拍摄与归档随二期落地</li>
+    <li>导入时全量重算异常标记，与原标记不一致的行单独列出供人工抽查</li>
+    <li>旧的单文档病历按日期拆分成多个条目文件随脚本一并迁入</li>
+    <li>整个过程只跑一次，完成后 settings 落标记防重复</li>
+  </div>
+  <div style="margin-top:10px;"><span class="st st-no">未实现</span><span style="font-size:12px;color:#8e8e93;">一期排期时随录入工具一并落地</span></div>
+</section>
+
+<!-- ============ 拓展段 ============ -->
+
+<section id="sec-future">
+  <div class="cap">拓展段</div>
+  <h2>二期与待定项</h2>
+  <table class="dt">
+    <tr><th>事项</th><th style="width:130px;">状态</th></tr>
+    <tr><td>User Story 定稿并写入模块文档</td><td><span class="st st-ok">已定稿</span></td></tr>
+    <tr><td>一期范围为化验数据加病历</td><td><span class="st st-ok">已定</span></td></tr>
+    <tr><td>存储选 SQLite，字典与规则进包</td><td><span class="st st-ok">已定</span></td></tr>
+    <tr><td>存量经一次性脚本导入，科目按八大类分组</td><td><span class="st st-ok">已定</span></td></tr>
+    <tr><td>影像病理单独成表，文字与图片同存</td><td><span class="st st-ok">已定</span></td></tr>
+    <tr><td>MCP 工具 9 个，化验 5 影像病理 2 病历 2，改删保留</td><td><span class="st st-ok">已定</span></td></tr>
+    <tr><td>WS 快照推全量，单人使用数据量可控</td><td><span class="st st-ok">已定</span></td></tr>
+    <tr><td>病历按日期一文件存放，快照按文件留版本</td><td><span class="st st-ok">已定</span></td></tr>
+    <tr><td>异常标记一律由工具按参考范围判定</td><td><span class="st st-ok">已定</span></td></tr>
+    <tr><td>化验单图片存储、传输与预览，识别交给平台多模态模型</td><td><span class="st st-no">二期</span></td></tr>
+  </table>
+  <div class="pts" style="margin-top:14px;">
+    <li>二期只做图片的存储、传输与预览，不建 OCR 子系统，识别依赖平台发图能力与模型多模态识图，依赖未就绪前不排期</li>
+    <li>照片存储方向是库存路径不存二进制，原图按检查日期放目录，影像病理表的图片引用字段届时挂载</li>
+    <li>病历快照的历史列表与一键回滚界面留待有真实需要时再排</li>
+  </div>
+</section>
+
+</main>
+
+<script>
+(function () {
+  var links = Array.prototype.slice.call(document.querySelectorAll('#nav a'));
+  var secs = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+  function onScroll() {
+    var y = window.scrollY + 140;
+    var idx = 0;
+    for (var i = 0; i < secs.length; i++) {
+      if (secs[i] && secs[i].offsetTop <= y) idx = i;
+    }
+    links.forEach(function (l, j) { l.classList.toggle('on', j === idx); });
+  }
+  window.addEventListener('scroll', onScroll);
+  onScroll();
+})();
+</script>
+
+</body>
+</html>

@@ -1,5 +1,39 @@
 // Shared types — mirror the WS protocol defined by the Python server.
 
+export type AbnormalFlag = 'H' | 'L'
+
+export interface LabResult {
+  id: number
+  date: string
+  specimen: string | null
+  category: string
+  analyte: string
+  valueNum: number | null
+  valueText: string | null
+  unit: string | null
+  refLow: number | null
+  refHigh: number | null
+  refText: string | null
+  abnormalFlag: AbnormalFlag | null
+  note: string | null
+}
+
+export interface ImagingFinding {
+  id: number
+  date: string
+  examType: string
+  findingText: string
+  imageRef: string | null
+  note: string | null
+}
+
+export interface JournalEntry {
+  date: string
+  title: string | null
+  content: string | null
+  updatedAt: string | null
+}
+
 export interface Profile {
   height: number | null
   name: string | null
@@ -77,11 +111,18 @@ export interface FitnessState {
   workouts: WorkoutEntry[]
 }
 
+export interface DiseaseState {
+  labResults: LabResult[]
+  imagingFindings: ImagingFinding[]
+  journal: JournalEntry[]
+}
+
 export interface ServerMessage {
   type: 'init' | 'update' | 'error'
   basics?: BasicsState
   diet?: DietState
   fitness?: FitnessState
+  disease?: DiseaseState
   mockOn?: boolean
   version?: string
   schemaVersion?: number

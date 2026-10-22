@@ -1,23 +1,19 @@
-import { useState } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { Navigate, useNavigate, useParams } from 'react-router'
 import { Settings as SettingsIcon } from 'lucide-react'
-import type { BasicsState, DietState, FitnessState, GoalMode, Tab } from '../types'
+import type { BasicsState, DietState, DiseaseState, FitnessState } from '../types'
 import { buildSummary, type SummaryCard, type TagTone } from '../summary'
 import { formatDate, todayStr } from '../helpers'
 import { useI18n } from '../i18n'
 import type { TKey } from '../i18n/locales'
-import { pushVariants, fadeVariants, PAGE_TRANSITION } from '@/lib/transitions'
+import { useDrill } from '@/lib/router'
 import { Sparkline } from './Sparkline'
 import { DetailHeader } from './DetailHeader'
 import { ProfileDetail } from './ProfileDetail'
 import { WeightDetail, BloodPressureDetail } from './DetailViews'
-import { SettingsPage } from './SettingsPage'
 import { Badge } from './ui/badge'
 import { Tile } from './ui/primitives'
 
-type Detail = 'none' | 'settings' | 'profile' | 'weight' | 'blood_pressure'
-
-const DETAIL_TITLES: Record<Exclude<Detail, 'none' | 'settings'>, TKey> = {
+const DETAIL_TITLES: Record<string, TKey> = {
   profile: 'detail.profile',
   weight: 'metric.weight',
   blood_pressure: 'metric.bloodPressure',
@@ -33,131 +29,75 @@ interface Props {
   basics: BasicsState
   diet: DietState
   fitness: FitnessState
-  mockOn: boolean
-  version: string
-  schemaVersion: number
-  onSetHeight: (height: number) => void
-  onSetName: (name: string) => void
-  onSetDietGoal: (goal: number) => void
-  onSetGoalMode: (mode: GoalMode) => void
-  onSetMacroGoals: (carbs: number, protein: number, fat: number) => void
-  onToggleMock: () => void
-  onNavigate: (tab: Tab) => void
+  disease: DiseaseState
 }
 
 /**
  * Home tab: fixed header (date / name / one-line status) on top, dynamically
- * selected cards below. Card selection rules live in summary.ts.
+ * selected cards below. Card selection rules live in summary.ts; every
+ * drill-in is a router navigation.
  */
-export function BasicsPage({
-  basics,
-  diet,
-  fitness,
-  mockOn,
-  version,
-  schemaVersion,
-  onSetHeight,
-  onSetName,
-  onSetDietGoal,
-  onSetGoalMode,
-  onSetMacroGoals,
-  onToggleMock,
-  onNavigate,
-}: Props) {
-  const [detail, setDetailState] = useState<Detail>('none')
-  const [dir, setDir] = useState(0)
-  const reduce = useReducedMotion()
-  const { t, locale } = useI18n()
-  const { status, cards } = buildSummary(basics, diet, fitness, t)
-
-  const openDetail = (d: Exclude<Detail, 'none'>) => {
-    setDir(1)
-    setDetailState(d)
-  }
-  const closeDetail = () => {
-    setDir(-1)
-    setDetailState('none')
-  }
-
-  const variants = reduce ? fadeVariants : pushVariants
+export function BasicsPage({ basics, diet, fitness, disease }: Props) {
+  const { t } = useI18n()
+  const drill = useDrill()
+  const navigate = useNavigate()
+  const { status, cards } = buildSummary(basics, diet, fitness, disease, t)
 
   return (
-    <AnimatePresence mode="wait" custom={dir} initial={false}>
-      {detail === 'settings' ? (
-        <motion.div
-          key="settings"
-          custom={dir}
-          variants={variants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={PAGE_TRANSITION}
-        >
-          <SettingsPage
-            name={basics.profile?.name ?? ''}
-            height={basics.profile?.height ?? null}
-            dietGoal={diet.goal}
-            goalMode={diet.goalMode}
-            macroGoals={diet.macroGoals}
-            mockOn={mockOn}
-            version={version}
-            schemaVersion={schemaVersion}
-            onSetName={onSetName}
-            onSetHeight={onSetHeight}
-            onSetDietGoal={onSetDietGoal}
-            onSetGoalMode={onSetGoalMode}
-            onSetMacroGoals={onSetMacroGoals}
-            onToggleMock={onToggleMock}
-            onBack={closeDetail}
+    <div>
+      <HomeHeader
+        name={basics.profile?.name}
+        status={status}
+        onSettings={() => drill('/summary/settings')}
+      />
+      <div className="grid grid-cols-2 gap-3">
+        {cards.map((card) => (
+          <SummaryTile
+            key={card.key}
+            card={card}
+            onClick={() => {
+              if (card.go === 'diet' || card.go === 'fitness' || card.go === 'disease') {
+                // Tab switches navigate without a direction marker and fade.
+                navigate(`/${card.go}`)
+              } else {
+                drill(`/summary/${card.go}`)
+              }
+            }}
           />
-        </motion.div>
-      ) : detail !== 'none' ? (
-        <motion.div
-          key={detail}
-          custom={dir}
-          variants={variants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={PAGE_TRANSITION}
-        >
-          <DetailHeader title={t(DETAIL_TITLES[detail])} onBack={closeDetail} />
-          {detail === 'profile' && (
-            <ProfileDetail profile={basics.profile} metrics={basics.metrics} onSetHeight={onSetHeight} />
-          )}
-          {detail === 'weight' && <WeightDetail metrics={basics.metrics} />}
-          {detail === 'blood_pressure' && <BloodPressureDetail metrics={basics.metrics} />}
-        </motion.div>
-      ) : (
-        <motion.div
-          key="main"
-          custom={dir}
-          variants={variants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={PAGE_TRANSITION}
-        >
-          <HomeHeader
-            name={basics.profile?.name}
-            status={status}
-            onSettings={() => openDetail('settings')}
-          />
-          <div className="grid grid-cols-2 gap-3">
-            {cards.map((card) => (
-              <SummaryTile
-                key={card.key}
-                card={card}
-                onClick={() => {
-                  if (card.go === 'diet' || card.go === 'fitness') onNavigate(card.go)
-                  else openDetail(card.go)
-                }}
-              />
-            ))}
-          </div>
-        </motion.div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Route view for the summary drill-ins: profile, weight or blood pressure. */
+export function SummaryDetailPage({
+  basics,
+  onSetHeight,
+}: {
+  basics: BasicsState
+  onSetHeight: (height: number) => void
+}) {
+  const { t } = useI18n()
+  const navigate = useNavigate()
+  const { detail } = useParams()
+  if (!detail || !DETAIL_TITLES[detail]) return <Navigate to="/summary" replace />
+  return (
+    <div>
+      <DetailHeader
+        title={t(DETAIL_TITLES[detail])}
+        onBack={() => navigate(-1)}
+      />
+      {detail === 'profile' && (
+        <ProfileDetail
+          profile={basics.profile}
+          metrics={basics.metrics}
+          onSetHeight={onSetHeight}
+        />
       )}
-    </AnimatePresence>
+      {detail === 'weight' && <WeightDetail metrics={basics.metrics} />}
+      {detail === 'blood_pressure' && <BloodPressureDetail metrics={basics.metrics} />}
+    </div>
   )
 }
 

@@ -2,10 +2,10 @@ import { useState } from 'react'
 import type { DietState } from '../types'
 import { dailyCalorieSeries, dayTotals, todayStr } from '../helpers'
 import { useI18n } from '../i18n'
+import { useDrill } from '@/lib/router'
 import { NutritionSummary } from './NutritionSummary'
 import { TrendChart } from './TrendChart'
 import { MealList } from './MealList'
-import { DietHistoryPage } from './DietHistoryPage'
 import { Chevron, SectionLabel } from './ui/primitives'
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs'
 
@@ -13,7 +13,6 @@ interface Props {
   diet: DietState
 }
 
-type View = { name: 'main' } | { name: 'history' }
 type Range = 'week' | 'month'
 
 const RANGE_DAYS: Record<Range, number> = { week: 7, month: 30 }
@@ -22,12 +21,8 @@ const RANGE_DAYS: Record<Range, number> = { week: 7, month: 30 }
  * week/month window toggle, drilling into a collapsible history list. */
 export function DietPage({ diet }: Props) {
   const { t } = useI18n()
-  const [view, setView] = useState<View>({ name: 'main' })
+  const drill = useDrill()
   const [range, setRange] = useState<Range>('week')
-
-  if (view.name === 'history') {
-    return <DietHistoryPage diet={diet} onBack={() => setView({ name: 'main' })} />
-  }
 
   const today = todayStr()
   const todayEntries = diet.entries.filter((e) => e.date === today)
@@ -83,7 +78,7 @@ export function DietPage({ diet }: Props) {
           }
           footer={
             <button
-              onClick={() => setView({ name: 'history' })}
+              onClick={() => drill('/diet/history')}
               className="press -mb-3 mt-2 flex w-full items-center justify-between border-t border-border py-3 text-base"
             >
               <span>{t('diet.viewHistory')}</span>

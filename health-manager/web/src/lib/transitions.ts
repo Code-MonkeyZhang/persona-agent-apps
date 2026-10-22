@@ -1,13 +1,17 @@
 import type { Variants } from 'motion/react'
 
 /**
- * Directional push variants: forward (drill in) slides in from the right,
- * backward (back) slides in from the left. Reads like an iOS nav stack.
+ * Directional page variants driven by router state: 0 is a tab switch and
+ * fades in place, 1 slides in from the right edge like an iOS push, -1
+ * reveals from the left quarter like an iOS pop. Runs under popLayout so
+ * both pages animate at the same time.
  */
-export const pushVariants: Variants = {
-  enter: (dir: number) => ({ opacity: 0, x: dir >= 0 ? 24 : -24 }),
-  center: { opacity: 1, x: 0 },
-  exit: (dir: number) => ({ opacity: 0, x: dir >= 0 ? -24 : 24 }),
+export const pageVariants: Variants = {
+  enter: (dir: number) =>
+    dir === 0 ? { opacity: 0, y: 8 } : { opacity: 1, x: dir > 0 ? '100%' : '-25%' },
+  center: { opacity: 1, x: '0%', y: 0 },
+  exit: (dir: number) =>
+    dir === 0 ? { opacity: 0, y: -8 } : { opacity: 1, x: dir > 0 ? '-25%' : '100%' },
 }
 
 /** Reduced-motion fallback: drop the geometric transform, keep the fade. */

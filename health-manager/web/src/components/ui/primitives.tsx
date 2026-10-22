@@ -1,4 +1,6 @@
 import * as React from 'react'
+import type { LucideIcon } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '../../i18n'
 
@@ -59,9 +61,10 @@ Row.displayName = 'Row'
 /** Right chevron used on drill-in rows. */
 export function Chevron({ className }: { className?: string }) {
   return (
-    <span className={cn('ml-0.5 text-xl font-light text-[#c7c7cc]', className)}>
-      ›
-    </span>
+    <ChevronRight
+      className={cn('ml-0.5 size-5 text-[#c7c7cc]', className)}
+      strokeWidth={2.5}
+    />
   )
 }
 
@@ -108,3 +111,38 @@ export const Tile = React.forwardRef<
   />
 ))
 Tile.displayName = 'Tile'
+
+/** Small tappable tile: a tinted icon box over a label, used for entry grids. */
+export function IconTile({
+  icon: Icon,
+  tint,
+  label,
+  onClick,
+  className,
+}: {
+  icon: LucideIcon
+  tint: string
+  label: string
+  onClick: () => void
+  className?: string
+}) {
+  return (
+    <button
+      className={cn(
+        'press flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border-none bg-card py-3.5',
+        className
+      )}
+      onClick={onClick}
+    >
+      <span
+        className={cn(
+          'flex h-9 w-9 items-center justify-center rounded-[10px]',
+          tint
+        )}
+      >
+        <Icon size={19} strokeWidth={2} />
+      </span>
+      <span className="text-[13px] font-medium">{label}</span>
+    </button>
+  )
+}
