@@ -85,6 +85,14 @@
   transform: scale(0.97);
 }
 
+/* Horizontal scrollers hide their scrollbar; drag and swipe keep working. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Reduced motion: fewer and gentler, not zero. Keep color/opacity feedback
  * (aids comprehension), drop geometric (transform) motion.
  */

@@ -54,3 +54,26 @@ def test_number_and_ref_text_formatting():
     assert ref_text(None, 150) == "≤150"
     assert ref_text(3.9, None) == "≥3.9"
     assert ref_text(None, None) is None
+
+
+def test_dictionary_payload_shape():
+    from health_manager.analytes import ANALYTES, GROUP_ORDER, dictionary_payload
+
+    payload = dictionary_payload()
+    assert payload["groups"] == list(GROUP_ORDER)
+    assert set(payload["items"]) == set(ANALYTES)
+
+    creatinine = payload["items"]["肌酐"]
+    assert creatinine["g"] == "生化检查"
+    assert creatinine["s"] == "肾功能"
+    assert creatinine["u"] == "umol/L"
+    assert "Scr" in creatinine["a"]
+    assert creatinine["r"] == "57-97"
+    assert (creatinine["lo"], creatinine["hi"]) == (57, 97)
+
+    group, members = payload["subs"]["肾功能"]
+    assert group == "生化检查"
+    assert "肌酐" in members
+
+    upper_only = payload["items"]["总胆固醇"]
+    assert upper_only["lo"] is None and upper_only["r"] == "≤5.18"

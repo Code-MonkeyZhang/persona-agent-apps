@@ -26,8 +26,9 @@ export function useDrill() {
 /** Route path builders so every path shape lives in one place. */
 export const routes = {
   analyte: (name: string) => `/disease/analyte/${encodeURIComponent(name)}`,
-  labCategory: (category: string) =>
-    `/disease/labs/${encodeURIComponent(category)}`,
+  subcat: (sub: string) => `/disease/subcat/${encodeURIComponent(sub)}`,
+  routineBp: () => '/disease/routine/bp',
+  routineMetric: (key: string) => `/disease/routine/${encodeURIComponent(key)}`,
   strength: (exercise: string, metric: string) =>
     `/fitness/strength/${encodeURIComponent(exercise)}?metric=${encodeURIComponent(metric)}`,
 }

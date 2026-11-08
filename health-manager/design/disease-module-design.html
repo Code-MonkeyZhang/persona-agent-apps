@@ -202,10 +202,6 @@ section h2 { font-size: 19px; margin-bottom: 14px; }
 .steps { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .step { background: #f0fdf4; border: 1px solid #bbf7d0; color: #14532d; border-radius: 10px; padding: 8px 12px; font-size: 12.5px; font-weight: 600; }
 .arrow { color: var(--ok); font-size: 16px; font-weight: 700; }
-/* 决策表 */
-table.dt { width: 100%; border-collapse: collapse; }
-table.dt th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--border); }
-table.dt td { font-size: 13px; padding: 9px 10px; border-bottom: 1px solid var(--border); }
 /* 指标字典清单 */
 .catalog { margin-top: 4px; }
 .catalog .intro { font-size: 12.5px; color: #52525b; background: #fafafa; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; line-height: 1.7; margin-bottom: 14px; }
@@ -249,7 +245,7 @@ table.cat tbody tr:last-child td { border-bottom: 0; }
   <a href="#sec-structure">数据结构与流</a>
   <a href="#sec-tools">MCP 工具盘点</a>
   <div class="navgroup">拓展段</div>
-  <a href="#sec-future">二期与待定项</a>
+  <a href="#sec-future">实现计划</a>
 </nav>
 
 <main>
@@ -2353,6 +2349,163 @@ window.PROTO_DATA = {"groups":[["生化检查","#0284c7"],["尿液检查","#b453
 <rect x="20" y="14" width="56" height="20" rx="6" fill="#dcfce7" stroke="#86efac"/>
 <text x="48" y="28" text-anchor="middle" font-size="10" font-weight="bold" fill="#15803d">已实现</text>
 <text x="86" y="28" font-size="12" font-weight="bold" fill="#374151">疾病模块 11 个工具全参数 · 依据 server.py 的 TOOLS 定义</text>
+<rect x="20.0" y="46.0" width="446.0" height="156" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+<text x="32.0" y="66.0" font-size="10.5" font-weight="bold" fill="#1c1c1e" font-family="Menlo,monospace">record_lab_result</text>
+<rect x="147" y="55.0" width="26" height="14" rx="4" fill="#ccfbf1"/><text x="152" y="65.5" font-size="8" fill="#0f766e">化验</text>
+<text x="454.0" y="66.0" text-anchor="end" font-size="9" fill="#6b7280">批量录一次化验</text>
+<text x="32.0" y="84.0" font-size="9" fill="#374151" font-family="Menlo,monospace">items</text>
+<text x="170" y="84.0" font-size="8" fill="#9ca3af">array</text>
+<text x="228" y="84.0" font-size="8" fill="#b91c1c">必填</text>
+<text x="264" y="84.0" font-size="8.5" fill="#6b7280">本次化验的项目列表</text>
+<line x1="44.0" y1="96.0" x2="48.0" y2="96.0" stroke="#c4c4ca"/>
+<text x="54.0" y="100.0" font-size="9" fill="#374151" font-family="Menlo,monospace">analyte</text>
+<text x="186" y="100.0" font-size="8" fill="#9ca3af">string</text>
+<text x="228" y="100.0" font-size="8" fill="#b91c1c">必填</text>
+<text x="264" y="100.0" font-size="8.5" fill="#6b7280">指标名，口语名或缩写均可，如 肌酐 / 血肌酐…</text>
+<line x1="44.0" y1="112.0" x2="48.0" y2="112.0" stroke="#c4c4ca"/>
+<text x="54.0" y="116.0" font-size="9" fill="#374151" font-family="Menlo,monospace">value_num</text>
+<text x="186" y="116.0" font-size="8" fill="#9ca3af">number</text>
+<text x="228" y="116.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="264" y="116.0" font-size="8.5" fill="#6b7280">数值结果，定性项目不填</text>
+<line x1="44.0" y1="128.0" x2="48.0" y2="128.0" stroke="#c4c4ca"/>
+<text x="54.0" y="132.0" font-size="9" fill="#374151" font-family="Menlo,monospace">value_text</text>
+<text x="186" y="132.0" font-size="8" fill="#9ca3af">string</text>
+<text x="228" y="132.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="264" y="132.0" font-size="8.5" fill="#6b7280">定性文字结果，如 阴性 / 2+，数值项目不填</text>
+<line x1="44.0" y1="144.0" x2="48.0" y2="144.0" stroke="#c4c4ca"/>
+<text x="54.0" y="148.0" font-size="9" fill="#374151" font-family="Menlo,monospace">unit</text>
+<text x="186" y="148.0" font-size="8" fill="#9ca3af">string</text>
+<text x="228" y="148.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="264" y="148.0" font-size="8.5" fill="#6b7280">单位，可选，默认用指标字典的单位</text>
+<line x1="44.0" y1="160.0" x2="48.0" y2="160.0" stroke="#c4c4ca"/>
+<text x="54.0" y="164.0" font-size="9" fill="#374151" font-family="Menlo,monospace">note</text>
+<text x="186" y="164.0" font-size="8" fill="#9ca3af">string</text>
+<text x="228" y="164.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="264" y="164.0" font-size="8.5" fill="#6b7280">备注，可选</text>
+<text x="32.0" y="180.0" font-size="9" fill="#374151" font-family="Menlo,monospace">date</text>
+<text x="170" y="180.0" font-size="8" fill="#9ca3af">string</text>
+<text x="228" y="180.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="264" y="180.0" font-size="8.5" fill="#6b7280">化验日期 YYYY-MM-DD，可选，默认今天</text>
+<rect x="494.0" y="46.0" width="446.0" height="76" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+<text x="506.0" y="66.0" font-size="10.5" font-weight="bold" fill="#1c1c1e" font-family="Menlo,monospace">get_lab_history</text>
+<rect x="608" y="55.0" width="26" height="14" rx="4" fill="#ccfbf1"/><text x="614" y="65.5" font-size="8" fill="#0f766e">化验</text>
+<text x="928.0" y="66.0" text-anchor="end" font-size="9" fill="#6b7280">查指标历史</text>
+<text x="506.0" y="84.0" font-size="9" fill="#374151" font-family="Menlo,monospace">analyte</text>
+<text x="644" y="84.0" font-size="8" fill="#9ca3af">string</text>
+<text x="702" y="84.0" font-size="8" fill="#b91c1c">必填</text>
+<text x="738" y="84.0" font-size="8.5" fill="#6b7280">指标名，口语名或缩写均可</text>
+<text x="506.0" y="100.0" font-size="9" fill="#374151" font-family="Menlo,monospace">limit</text>
+<text x="644" y="100.0" font-size="8" fill="#9ca3af">integer</text>
+<text x="702" y="100.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="738" y="100.0" font-size="8.5" fill="#6b7280">只返回最近 N 条，可选</text>
+<rect x="494.0" y="132.0" width="446.0" height="44" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+<text x="506.0" y="152.0" font-size="10.5" font-weight="bold" fill="#1c1c1e" font-family="Menlo,monospace">list_lab_analytes</text>
+<rect x="621" y="141.0" width="26" height="14" rx="4" fill="#ccfbf1"/><text x="626" y="151.5" font-size="8" fill="#0f766e">化验</text>
+<text x="928.0" y="152.0" text-anchor="end" font-size="9" fill="#6b7280">列字典指标</text>
+<rect x="494.0" y="186.0" width="446.0" height="140" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+<text x="506.0" y="206.0" font-size="10.5" font-weight="bold" fill="#1c1c1e" font-family="Menlo,monospace">update_lab_result</text>
+<rect x="621" y="195.0" width="26" height="14" rx="4" fill="#ccfbf1"/><text x="626" y="205.5" font-size="8" fill="#0f766e">化验</text>
+<text x="928.0" y="206.0" text-anchor="end" font-size="9" fill="#6b7280">按编号改一条</text>
+<text x="506.0" y="224.0" font-size="9" fill="#374151" font-family="Menlo,monospace">entry_id</text>
+<text x="644" y="224.0" font-size="8" fill="#9ca3af">integer</text>
+<text x="702" y="224.0" font-size="8" fill="#b91c1c">必填</text>
+<text x="738" y="224.0" font-size="8.5" fill="#6b7280">要修改的化验记录编号，来自查询返回里的 [编…</text>
+<text x="506.0" y="240.0" font-size="9" fill="#374151" font-family="Menlo,monospace">value_num</text>
+<text x="644" y="240.0" font-size="8" fill="#9ca3af">number</text>
+<text x="702" y="240.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="738" y="240.0" font-size="8.5" fill="#6b7280">数值结果</text>
+<text x="506.0" y="256.0" font-size="9" fill="#374151" font-family="Menlo,monospace">value_text</text>
+<text x="644" y="256.0" font-size="8" fill="#9ca3af">string</text>
+<text x="702" y="256.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="738" y="256.0" font-size="8.5" fill="#6b7280">定性文字结果</text>
+<text x="506.0" y="272.0" font-size="9" fill="#374151" font-family="Menlo,monospace">unit</text>
+<text x="644" y="272.0" font-size="8" fill="#9ca3af">string</text>
+<text x="702" y="272.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="738" y="272.0" font-size="8.5" fill="#6b7280">单位</text>
+<text x="506.0" y="288.0" font-size="9" fill="#374151" font-family="Menlo,monospace">date</text>
+<text x="644" y="288.0" font-size="8" fill="#9ca3af">string</text>
+<text x="702" y="288.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="738" y="288.0" font-size="8.5" fill="#6b7280">日期 YYYY-MM-DD</text>
+<text x="506.0" y="304.0" font-size="9" fill="#374151" font-family="Menlo,monospace">note</text>
+<text x="644" y="304.0" font-size="8" fill="#9ca3af">string</text>
+<text x="702" y="304.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="738" y="304.0" font-size="8.5" fill="#6b7280">备注</text>
+<rect x="20.0" y="212.0" width="446.0" height="60" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+<text x="32.0" y="232.0" font-size="10.5" font-weight="bold" fill="#1c1c1e" font-family="Menlo,monospace">delete_lab_result</text>
+<rect x="147" y="221.0" width="26" height="14" rx="4" fill="#ccfbf1"/><text x="152" y="231.5" font-size="8" fill="#0f766e">化验</text>
+<text x="454.0" y="232.0" text-anchor="end" font-size="9" fill="#6b7280">按编号删一条</text>
+<text x="32.0" y="250.0" font-size="9" fill="#374151" font-family="Menlo,monospace">entry_id</text>
+<text x="170" y="250.0" font-size="8" fill="#9ca3af">integer</text>
+<text x="228" y="250.0" font-size="8" fill="#b91c1c">必填</text>
+<text x="264" y="250.0" font-size="8.5" fill="#6b7280">要删除的化验记录编号，来自查询返回里的 [编…</text>
+<rect x="20.0" y="282.0" width="446.0" height="108" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+<text x="32.0" y="302.0" font-size="10.5" font-weight="bold" fill="#1c1c1e" font-family="Menlo,monospace">record_imaging_finding</text>
+<rect x="179" y="291.0" width="26" height="14" rx="4" fill="#ccfbf1"/><text x="184" y="301.5" font-size="8" fill="#0f766e">影像</text>
+<text x="454.0" y="302.0" text-anchor="end" font-size="9" fill="#6b7280">录影像所见</text>
+<text x="32.0" y="320.0" font-size="9" fill="#374151" font-family="Menlo,monospace">exam_type</text>
+<text x="170" y="320.0" font-size="8" fill="#9ca3af">string</text>
+<text x="228" y="320.0" font-size="8" fill="#b91c1c">必填</text>
+<text x="264" y="320.0" font-size="8.5" fill="#6b7280">检查类型，如 腹部超声 / CT检查 / 肾穿病理</text>
+<text x="32.0" y="336.0" font-size="9" fill="#374151" font-family="Menlo,monospace">finding_text</text>
+<text x="170" y="336.0" font-size="8" fill="#9ca3af">string</text>
+<text x="228" y="336.0" font-size="8" fill="#b91c1c">必填</text>
+<text x="264" y="336.0" font-size="8.5" fill="#6b7280">检查结论原文，可多行</text>
+<text x="32.0" y="352.0" font-size="9" fill="#374151" font-family="Menlo,monospace">date</text>
+<text x="170" y="352.0" font-size="8" fill="#9ca3af">string</text>
+<text x="228" y="352.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="264" y="352.0" font-size="8.5" fill="#6b7280">检查日期 YYYY-MM-DD，可选，默认今天</text>
+<text x="32.0" y="368.0" font-size="9" fill="#374151" font-family="Menlo,monospace">note</text>
+<text x="170" y="368.0" font-size="8" fill="#9ca3af">string</text>
+<text x="228" y="368.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="264" y="368.0" font-size="8.5" fill="#6b7280">备注，可选</text>
+<rect x="494.0" y="336.0" width="446.0" height="76" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+<text x="506.0" y="356.0" font-size="10.5" font-weight="bold" fill="#1c1c1e" font-family="Menlo,monospace">get_imaging_history</text>
+<rect x="634" y="345.0" width="26" height="14" rx="4" fill="#ccfbf1"/><text x="639" y="355.5" font-size="8" fill="#0f766e">影像</text>
+<text x="928.0" y="356.0" text-anchor="end" font-size="9" fill="#6b7280">查影像记录</text>
+<text x="506.0" y="374.0" font-size="9" fill="#374151" font-family="Menlo,monospace">exam_type</text>
+<text x="644" y="374.0" font-size="8" fill="#9ca3af">string</text>
+<text x="702" y="374.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="738" y="374.0" font-size="8.5" fill="#6b7280">按检查类型过滤，可选</text>
+<text x="506.0" y="390.0" font-size="9" fill="#374151" font-family="Menlo,monospace">limit</text>
+<text x="644" y="390.0" font-size="8" fill="#9ca3af">integer</text>
+<text x="702" y="390.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="738" y="390.0" font-size="8.5" fill="#6b7280">只返回最近 N 条，可选</text>
+<rect x="20.0" y="400.0" width="446.0" height="60" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+<text x="32.0" y="420.0" font-size="10.5" font-weight="bold" fill="#1c1c1e" font-family="Menlo,monospace">get_health_journal</text>
+<rect x="153" y="409.0" width="26" height="14" rx="4" fill="#ccfbf1"/><text x="158" y="419.5" font-size="8" fill="#0f766e">病历</text>
+<text x="454.0" y="420.0" text-anchor="end" font-size="9" fill="#6b7280">读病历</text>
+<text x="32.0" y="438.0" font-size="9" fill="#374151" font-family="Menlo,monospace">date</text>
+<text x="170" y="438.0" font-size="8" fill="#9ca3af">string</text>
+<text x="228" y="438.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="264" y="438.0" font-size="8.5" fill="#6b7280">就诊日期 YYYY-MM-DD，可选。不填返回病历索…</text>
+<rect x="494.0" y="422.0" width="446.0" height="92" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+<text x="506.0" y="442.0" font-size="10.5" font-weight="bold" fill="#1c1c1e" font-family="Menlo,monospace">update_health_journal</text>
+<rect x="646" y="431.0" width="26" height="14" rx="4" fill="#ccfbf1"/><text x="651" y="441.5" font-size="8" fill="#0f766e">病历</text>
+<text x="928.0" y="442.0" text-anchor="end" font-size="9" fill="#6b7280">写病历</text>
+<text x="506.0" y="460.0" font-size="9" fill="#374151" font-family="Menlo,monospace">date</text>
+<text x="644" y="460.0" font-size="8" fill="#9ca3af">string</text>
+<text x="702" y="460.0" font-size="8" fill="#b91c1c">必填</text>
+<text x="738" y="460.0" font-size="8.5" fill="#6b7280">就诊日期 YYYY-MM-DD</text>
+<text x="506.0" y="476.0" font-size="9" fill="#374151" font-family="Menlo,monospace">content</text>
+<text x="644" y="476.0" font-size="8" fill="#9ca3af">string</text>
+<text x="702" y="476.0" font-size="8" fill="#b91c1c">必填</text>
+<text x="738" y="476.0" font-size="8.5" fill="#6b7280">病历正文，markdown</text>
+<text x="506.0" y="492.0" font-size="9" fill="#374151" font-family="Menlo,monospace">title</text>
+<text x="644" y="492.0" font-size="8" fill="#9ca3af">string</text>
+<text x="702" y="492.0" font-size="8" fill="#9ca3af">可选</text>
+<text x="738" y="492.0" font-size="8.5" fill="#6b7280">标题，如 肾内科复诊，可选</text>
+<rect x="20.0" y="470.0" width="446.0" height="44" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+<text x="32.0" y="490.0" font-size="10.5" font-weight="bold" fill="#1c1c1e" font-family="Menlo,monospace">get_health_basics</text>
+<rect x="147" y="479.0" width="42" height="14" rx="4" fill="#ccfbf1"/><text x="152" y="489.5" font-size="8" fill="#0f766e">健康基础</text>
+<text x="454.0" y="490.0" text-anchor="end" font-size="9" fill="#6b7280">读病史基础</text>
+<rect x="20.0" y="524.0" width="446.0" height="60" rx="10" fill="#f9fafb" stroke="#d1d5db"/>
+<text x="32.0" y="544.0" font-size="10.5" font-weight="bold" fill="#1c1c1e" font-family="Menlo,monospace">update_health_basics</text>
+<rect x="166" y="533.0" width="42" height="14" rx="4" fill="#ccfbf1"/><text x="171" y="543.5" font-size="8" fill="#0f766e">健康基础</text>
+<text x="454.0" y="544.0" text-anchor="end" font-size="9" fill="#6b7280">写病史基础</text>
+<text x="32.0" y="562.0" font-size="9" fill="#374151" font-family="Menlo,monospace">content</text>
+<text x="170" y="562.0" font-size="8" fill="#9ca3af">string</text>
+<text x="228" y="562.0" font-size="8" fill="#b91c1c">必填</text>
+<text x="264" y="562.0" font-size="8.5" fill="#6b7280">病史基础全文，markdown，整篇替换</text>
 <text x="20" y="606" font-size="12" font-weight="bold" fill="#374151">其余三模块 14 个工具 · 签名行</text>
 <rect x="20" y="616" width="920" height="52" rx="10" fill="#f8fafc" stroke="#d1d5db"/>
 <text x="34" y="632" font-size="11" font-weight="bold" fill="#374151">体征模块 · 2 个</text>
@@ -2418,26 +2571,22 @@ window.PROTO_DATA = {"groups":[["生化检查","#0284c7"],["尿液检查","#b453
 <!-- ============ 拓展段 ============ -->
 
 <section id="sec-future">
-  <div class="cap">拓展段</div>
-  <h2>二期与待定项</h2>
-  <table class="dt">
-    <tr><th>事项</th><th style="width:130px;">状态</th></tr>
-    <tr><td>User Story 定稿并写入模块文档</td><td><span class="st st-ok">已定稿</span></td></tr>
-    <tr><td>根部卡片流浏览形态，四类内容统一入口</td><td><span class="st st-ok">已定</span></td></tr>
-    <tr><td>一期范围为化验、常规检查、影像与病历四类</td><td><span class="st st-ok">已定</span></td></tr>
-    <tr><td>存储选 SQLite，字典与规则进包</td><td><span class="st st-ok">已定</span></td></tr>
-    <tr><td>存量经一次性脚本导入，科目按八大类分组</td><td><span class="st st-ok">已定</span></td></tr>
-    <tr><td>影像病理单独成表，文字与图片同存</td><td><span class="st st-ok">已定</span></td></tr>
-    <tr><td>MCP 工具已实现，疾病相关 11 个，全 App 共 25 个</td><td><span class="st st-ok">已定</span></td></tr>
-    <tr><td>WS 快照推全量，单人使用数据量可控</td><td><span class="st st-ok">已定</span></td></tr>
-    <tr><td>病历按日期一文件存放，快照按文件留版本</td><td><span class="st st-ok">已定</span></td></tr>
-    <tr><td>异常标记一律由工具按参考范围判定</td><td><span class="st st-ok">已定</span></td></tr>
-    <tr><td>化验单图片存储、传输与预览，识别交给平台多模态模型</td><td><span class="st st-no">二期</span></td></tr>
-  </table>
-  <div class="pts" style="margin-top:14px;">
-    <li>二期只做图片的存储、传输与预览，不建 OCR 子系统，识别依赖平台发图能力与模型多模态识图，依赖未就绪前不排期</li>
-    <li>照片存储方向是库存路径不存二进制，原图按检查日期放目录，影像病理表的图片引用字段届时挂载</li>
-    <li>病历快照的历史列表与一键回滚界面留待有真实需要时再排</li>
+  <div class="cap">实现段</div>
+  <h2>实现计划</h2>
+  <div class="pts">
+    <h4>TODO</h4>
+    <li>字典下发：小类归属、别名与限值随快照给前端，分组排序搜索的前置</li>
+    <li>显示内核移植：异常口径、连续严重度、排序函数进 web/src</li>
+    <li>根部改浏览页：搜索置顶、三入口、六大类分区、小类通栏卡加数字胶囊、横滑小卡异常置顶</li>
+    <li>小类页项目行：裸参考区间，数值 sparkline，定性迷你分级条</li>
+    <li>详情页图表分派：数值双带、仅上限带、无范围纯线、定性时间条</li>
+    <li>常规检查：血压双线目标 130 与 80，体重纯走势，心率 60 至 100 参考带</li>
+    <li>搜索归一：别名经字典映射，口语叫法可搜到标准名</li>
+    <li>文案清理：区间裸写，偏高偏低换箭头，i18n 补 key</li>
+    <li>数据清理：同日多行机制维持现状，一次性清除同日同值重复行，每组留一行</li>
+    <li>血型迁移：病历基础血型行补 Rh 阳性，删化验表两行血型孤儿，重启重推快照</li>
+    <li>摘要联动：暂缓，摘要页保持现状</li>
+    <li>验证：pytest 全量，重新构建 ui 产物，部署重启加载 155 项字典</li>
   </div>
 </section>
 

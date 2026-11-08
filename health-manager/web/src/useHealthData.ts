@@ -36,6 +36,7 @@ export function useHealthData() {
     imagingFindings: [],
     journal: [],
     journalBasics: null,
+    labDictionary: null,
   })
   const [mockOn, setMockOn] = useState(false)
   const [version, setVersion] = useState('')

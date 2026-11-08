@@ -111,11 +111,30 @@ export interface FitnessState {
   workouts: WorkoutEntry[]
 }
 
+/** One dictionary analyte served with the snapshot. */
+export interface DictItem {
+  g: string
+  s: string
+  u: string
+  r: string | null
+  a: string[]
+  lo: number | null
+  hi: number | null
+}
+
+/** Lab dictionary served with the snapshot: group order, item metadata, subcategory members. */
+export interface LabDictionary {
+  groups: string[]
+  items: Record<string, DictItem>
+  subs: Record<string, [string, string[]]>
+}
+
 export interface DiseaseState {
   labResults: LabResult[]
   imagingFindings: ImagingFinding[]
   journal: JournalEntry[]
   journalBasics: JournalEntry | null
+  labDictionary: LabDictionary | null
 }
 
 export interface ServerMessage {

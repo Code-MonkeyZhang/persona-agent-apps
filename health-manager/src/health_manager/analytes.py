@@ -307,3 +307,27 @@ def ref_text(low: float | None, high: float | None) -> str | None:
     if low is not None:
         return f"≥{num(low)}"
     return None
+
+
+def dictionary_payload() -> dict:
+    """Lab dictionary for the frontend snapshot: grouping, aliases, ranges.
+
+    - groups lists the six fixed groups in display order
+    - items maps every standard name to its subcategory, fallback unit,
+      alias list, reference bounds and formatted reference text
+    - subs maps every subcategory to its group and member names
+    """
+    items: dict[str, dict] = {}
+    subs: dict[str, list] = {}
+    for entry in ANALYTES.values():
+        items[entry.name] = {
+            "g": entry.group,
+            "s": entry.category,
+            "u": entry.unit or "",
+            "r": ref_text(entry.ref_low, entry.ref_high),
+            "a": list(entry.aliases),
+            "lo": entry.ref_low,
+            "hi": entry.ref_high,
+        }
+        subs.setdefault(entry.category, [entry.group, []])[1].append(entry.name)
+    return {"groups": list(GROUP_ORDER), "items": items, "subs": subs}

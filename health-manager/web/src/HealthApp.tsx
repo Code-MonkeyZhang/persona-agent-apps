@@ -12,7 +12,8 @@ import { DiseasePage } from './components/DiseasePage'
 import { FitnessPage } from './components/FitnessPage'
 import { ImagingPage } from './components/ImagingPage'
 import { JournalPage } from './components/JournalPage'
-import { LabCatalog, LabCategoryPage } from './components/LabCatalog'
+import { LabSubcatPage } from './components/LabSubcatPage'
+import { BpDetail, MetricDetail, RoutinePage } from './components/RoutinePage'
 import { SettingsPage } from './components/SettingsPage'
 import { StrengthDetail } from './components/StrengthDetail'
 import { TabBar } from './components/TabBar'
@@ -152,16 +153,36 @@ export function HealthApp({ className }: { className?: string }) {
               />
               <Route path="/disease" element={<DiseasePage disease={disease} />} />
               <Route
-                path="/disease/labs"
-                element={<LabCatalog labs={disease.labResults} onBack={back} />}
-              />
-              <Route
-                path="/disease/labs/:category"
-                element={<LabCategoryPage labs={disease.labResults} onBack={back} />}
+                path="/disease/subcat/:sub"
+                element={
+                  <LabSubcatPage
+                    labs={disease.labResults}
+                    dict={disease.labDictionary}
+                    onBack={back}
+                  />
+                }
               />
               <Route
                 path="/disease/analyte/:analyte"
-                element={<AnalyteDetail labs={disease.labResults} onBack={back} />}
+                element={
+                  <AnalyteDetail
+                    labs={disease.labResults}
+                    dict={disease.labDictionary}
+                    onBack={back}
+                  />
+                }
+              />
+              <Route
+                path="/disease/routine"
+                element={<RoutinePage metrics={basics.metrics} onBack={back} />}
+              />
+              <Route
+                path="/disease/routine/bp"
+                element={<BpDetail metrics={basics.metrics} onBack={back} />}
+              />
+              <Route
+                path="/disease/routine/:metric"
+                element={<MetricDetail metrics={basics.metrics} onBack={back} />}
               />
               <Route
                 path="/disease/imaging"
