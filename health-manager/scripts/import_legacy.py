@@ -47,7 +47,7 @@ IMAGING_CATEGORIES = {"腹部超声", "肾穿病理", "CT检查"}
 # normalization prefers the blood variant, so scope these by folder group
 SCOPED_NAMES = {
     ("尿液检查", "红细胞计数"): "尿红细胞计数",
-    ("尿液检查", "白细胞"): "尿白细胞",
+    ("尿液检查", "白细胞"): "白细胞酯酶",
 }
 
 # The preamble of the legacy journal holds undated background - it becomes the

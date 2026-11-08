@@ -26,7 +26,7 @@ def test_normalize_scoped_blood_and_urine_names():
     assert normalize_analyte("白细胞") == "白细胞计数"
     assert normalize_analyte("WBC") == "白细胞计数"
     assert normalize_analyte("红细胞计数") == "红细胞计数"
-    assert normalize_analyte("尿白细胞") == "尿白细胞"
+    assert normalize_analyte("尿白细胞") == "白细胞酯酶"
     assert normalize_analyte("尿红细胞") == "尿红细胞计数"
 
 
